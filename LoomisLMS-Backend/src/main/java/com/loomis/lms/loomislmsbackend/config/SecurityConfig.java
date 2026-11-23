@@ -30,8 +30,12 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("")
-                        .permitAll().anyRequest().authenticated()
+                        .requestMatchers(
+                                "/api/health",
+                                "/api/auth/**")
+                        .permitAll()
+                        .anyRequest()
+                        .authenticated()
                 );
         return http.build();
     }
