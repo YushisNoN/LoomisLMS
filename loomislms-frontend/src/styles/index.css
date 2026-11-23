@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+/*
+    DESIGN TOKENS
+ */
+
+
+@theme {
+    /* Backgrounds */
+    --color-app: #0D1020;
+    --color-sidebar: #111629;
+    --color-surface: #171D30;
+    --color-surface-hover: #202943;
+    --color-surface-elevated: #252D43;
+
+    /* Brand */
+    --color-primary: #7968F2;
+    --color-primary-hover: #8B7BFF;
+    --color-primary-muted: #30295D;
+
+    /* Text */
+    --color-text: #F4F5FB;
+    --color-text-secondary: #A5ADC2;
+    --color-text-muted: #737D96;
+
+    /* Borders */
+    --color-border: #29324A;
+    --color-border-hover: #414D6C;
+
+    /* Semantic */
+    --color-success: #32C997;
+    --color-warning: #F2B95F;
+    --color-danger: #F16D7A;
+    --color-info: #5CA5F5;
+
+    /* Typography */
+    --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
+
+    /* Layout */
+    --spacing-sidebar: 240px;
+    --spacing-header: 64px;
+}
+
+:root {
+    color-scheme: dark;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-width: 320px;
+    min-height: 100%;
+}
+
+body {
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+
+    background-color: var(--color-app);
+    color: var(--color-text);
+}
+
+#root {
+    min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+    font: inherit;
+}
