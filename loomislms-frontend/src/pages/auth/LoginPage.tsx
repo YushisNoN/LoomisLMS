@@ -2,8 +2,31 @@ import { Link } from 'react-router-dom'
 
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
+import {useNavigate} from "react-router-dom";
+import {useAuth} from "../../context/AuthContext.tsx";
+import {useState} from "react";
+import type {FormEvent} from "react";
 
 function LoginPage() {
+
+    const { login, isAuthenticated } = useAuth()
+    const navigate = useNavigate()
+
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [error, setError] = useState('')
+
+    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault()
+        setError('')
+        try {
+            login(email, password)
+            navigate('/dashboard')
+        } catch {
+            setError('Не удалось выполнить вход')
+        }
+    }
+
     return (
         <div className="
             flex
@@ -14,13 +37,11 @@ function LoginPage() {
             px-4
         ">
             <div className="w-full max-w-md">
-
                 {/* Logo */}
                 <div className="mb-8 text-center">
                     <h1 className="text-3xl font-bold">
                         Loomis<span className="text-primary">LMS</span>
                     </h1>
-
                     <p className="mt-2 text-sm text-text-secondary">
                         Learning Management System
                     </p>
@@ -42,19 +63,25 @@ function LoginPage() {
                         Войдите в свой аккаунт
                     </p>
 
-                    <form className="mt-8 flex flex-col gap-5">
+                    <form className="mt-8 flex flex-col gap-5" onSubmit={handleSubmit}>
 
                         <Input
                             label="Email"
+                            name="email"
                             type="email"
                             placeholder="example@mail.com"
+                            value={email}
+                            onChange={(event) => setEmail(event.target.value)}
                             required
                         />
 
                         <Input
                             label="Пароль"
+                            name="password"
                             type="password"
                             placeholder="Введите пароль"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
                             required
                         />
 
@@ -66,7 +93,11 @@ function LoginPage() {
                                 Забыли пароль?
                             </Link>
                         </div>
-
+                        {error && (
+                            <p className="text-sm text-danger">
+                                {error}
+                            </p>
+                        )}
                         <Button type="submit" className="w-full">
                             Войти
                         </Button>
