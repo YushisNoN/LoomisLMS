@@ -1,7 +1,7 @@
 package com.loomis.lms.loomislmsbackend.controller;
+import com.loomis.lms.loomislmsbackend.dto.LoginRequest;
+import com.loomis.lms.loomislmsbackend.dto.LoginResponse;
 import com.loomis.lms.loomislmsbackend.dto.RegisterRequest;
-import com.loomis.lms.loomislmsbackend.dto.UserResponse;
-import com.loomis.lms.loomislmsbackend.entity.User;
 
 import com.loomis.lms.loomislmsbackend.services.AuthService;
 import jakarta.validation.Valid;
@@ -19,8 +19,12 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse register(@Valid @RequestBody RegisterRequest registerRequest) {
-        User user = authService.register(registerRequest);
-        return UserResponse.from(user);
+    public LoginResponse register(@Valid @RequestBody RegisterRequest registerRequest) {
+        return authService.register(registerRequest);
+    }
+
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest) {
+        return authService.login(loginRequest);
     }
 }
