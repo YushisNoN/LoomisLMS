@@ -1,4 +1,6 @@
-import Button from '../components/ui/Button';
+import Button from '../components/ui/Button.tsx';
+import Card from "../components/ui/Card.tsx";
+import Input from "../components/ui/Input.tsx";
 
 function App() {
     return (
@@ -89,6 +91,45 @@ function App() {
                     <Button disabled>Disabled</Button>
                 </div>
             </div>
+                <div className="mt-8">
+                    <Card className="max-w-md">
+                        <h2 className="text-lg font-semibold">
+                            Мой первый курс
+                        </h2>
+
+                        <p className="mt-2 text-sm text-text-secondary">
+                            Здесь будет описание курса.
+                        </p>
+
+                        <div className="mt-4">
+                            <Button>Перейти</Button>
+                        </div>
+                    </Card>
+                </div>
+                <div className="mt-8 max-w-md">
+                    <Card>
+                        <h2 className="mb-5 text-lg font-semibold">
+                            Input Component
+                        </h2>
+                        <div className="flex flex-col gap-4">
+                            <Input
+                                label="Email"
+                                type="email"
+                                placeholder="example@mail.com"
+                            />
+                            <Input
+                                label="Password"
+                                type="password"
+                                placeholder="Enter password"
+                            />
+                            <Input
+                                label="Username"
+                                placeholder="Enter username"
+                                error="Username is already taken"
+                            />
+                        </div>
+                    </Card>
+                </div>
             </section>
         </main>
     )
