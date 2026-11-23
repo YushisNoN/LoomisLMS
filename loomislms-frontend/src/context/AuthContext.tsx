@@ -1,5 +1,4 @@
-import {createContext, useContext, useState,} from 'react'
-
+import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 
 interface User {
@@ -8,13 +7,19 @@ interface User {
     name: string
 }
 
-// Что будет доступно через контекст
 interface AuthContextType {
     user: User | null
     isAuthenticated: boolean
-    login: (email: string, password: string) => void
+    login: (email: string, password: string) => Promise<void>
     logout: () => void
+    register: (
+        firstName: string,
+        lastName: string,
+        email: string,
+        password: string
+    ) => Promise<void>
 }
+
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
@@ -25,20 +30,61 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null)
 
-    function login(email: string, password: string) {
-        // Заглушка для backend
-        if (!email || !password) {
-            throw new Error('Email и пароль обязательны')
+    async function register(firstName: string, lastName: string, email: string, password: string) {
+        const response = await fetch('http://localhost:8080/api/auth/register', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                firstName,
+                lastName,
+                email,
+                password,
+            }),
+        })
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Ошибка регистрации')
         }
 
+        localStorage.setItem('token', data.token)
+
         setUser({
-            id: crypto.randomUUID(),
+            id: '',
+            email,
+            name: `${firstName} ${lastName}`,
+        })
+    }
+
+    async function login(email: string, password: string) {
+        const response = await fetch('http://localhost:8080/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Неверный email или пароль')
+        }
+
+        localStorage.setItem('token', data.token)
+
+        // Пока используем email как имя пользователя.
+        setUser({
+            id: '',
             email,
             name: email.split('@')[0],
         })
     }
 
     function logout() {
+        localStorage.removeItem('token')
         setUser(null)
     }
 
@@ -46,6 +92,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         user,
         isAuthenticated: user !== null,
         login,
+        register,
         logout,
     }
 
@@ -60,9 +107,7 @@ export function useAuth() {
     const context = useContext(AuthContext)
 
     if (!context) {
-        throw new Error(
-            'useAuth должен использоваться внутри AuthProvider'
-        )
+        throw new Error('useAuth должен использоваться внутри AuthProvider')
     }
 
     return context

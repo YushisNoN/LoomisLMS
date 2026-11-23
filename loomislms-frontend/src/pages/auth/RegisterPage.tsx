@@ -3,9 +3,12 @@ import { useState } from 'react'
 
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
-
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../context/AuthContext'
 
 function RegisterPage() {
+
+
 
     const [formData, setFormData] = useState({
         firstName: '',
@@ -15,6 +18,11 @@ function RegisterPage() {
         confirmPassword: '',
     })
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    const [serverError, setServerError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const navigate = useNavigate();
+    const { register } = useAuth();
 
     function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
         const { name, value } = event.target
@@ -30,14 +38,32 @@ function RegisterPage() {
         }));
     }
 
-    function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault()
+    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+
+        setServerError('');
+        setSuccessMessage('');
 
         if (!validateForm()) {
-            return
+            return;
         }
 
-        console.log('Form data:', formData)
+        try {
+            await register(
+                formData.firstName,
+                formData.lastName,
+                formData.email,
+                formData.password
+            )
+
+            navigate('/dashboard')
+        } catch (error) {
+            if (error instanceof Error) {
+                setServerError(error.message)
+            } else {
+                setServerError('Не удалось подключиться к серверу')
+            }
+        }
     }
 
     function validateForm() {
@@ -160,7 +186,17 @@ function RegisterPage() {
                             error={errors.confirmPassword}
                             required
                         />
+                        {serverError && (
+                            <p className="text-sm text-red-500">
+                                {serverError}
+                            </p>
+                        )}
 
+                        {successMessage && (
+                            <p className="text-sm text-green-500">
+                                {successMessage}
+                            </p>
+                        )}
                         <Button type="submit" className="w-full">
                             Зарегистрироваться
                         </Button>

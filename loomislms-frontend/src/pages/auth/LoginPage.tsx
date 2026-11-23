@@ -7,23 +7,28 @@ import {useAuth} from "../../context/AuthContext.tsx";
 import {useState} from "react";
 import type {FormEvent} from "react";
 
+
 function LoginPage() {
 
-    const { login, isAuthenticated } = useAuth()
     const navigate = useNavigate()
-
+    const { login } = useAuth();
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
 
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault()
         setError('')
+
         try {
-            login(email, password)
+            await login(email, password)
             navigate('/dashboard')
-        } catch {
-            setError('Не удалось выполнить вход')
+        } catch (error) {
+            setError(
+                error instanceof Error
+                    ? error.message
+                    : 'Не удалось выполнить вход'
+            )
         }
     }
 
