@@ -1,0 +1,26 @@
+package com.loomis.lms.loomislmsbackend.controller;
+import com.loomis.lms.loomislmsbackend.dto.RegisterRequest;
+import com.loomis.lms.loomislmsbackend.dto.UserResponse;
+import com.loomis.lms.loomislmsbackend.entity.User;
+
+import com.loomis.lms.loomislmsbackend.services.AuthService;
+import jakarta.validation.Valid;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+
+    @Autowired
+    private AuthService authService;
+
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse register(@Valid @RequestBody RegisterRequest registerRequest) {
+        User user = authService.register(registerRequest);
+        return UserResponse.from(user);
+    }
+}
