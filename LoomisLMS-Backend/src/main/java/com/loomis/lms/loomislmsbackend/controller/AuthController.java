@@ -1,8 +1,5 @@
 package com.loomis.lms.loomislmsbackend.controller;
-import com.loomis.lms.loomislmsbackend.dto.CurrentUserResponse;
-import com.loomis.lms.loomislmsbackend.dto.LoginRequest;
-import com.loomis.lms.loomislmsbackend.dto.LoginResponse;
-import com.loomis.lms.loomislmsbackend.dto.RegisterRequest;
+import com.loomis.lms.loomislmsbackend.dto.*;
 
 import com.loomis.lms.loomislmsbackend.services.AuthService;
 import jakarta.validation.Valid;
@@ -37,5 +34,16 @@ public class AuthController {
             throw new BadCredentialsException("Invalid authentication");
         }
         return authService.getCurrentUser(userId);
+    }
+
+    @PostMapping("/refresh")
+    public LoginResponse refresh(@RequestBody RefreshTokenRequest request) {
+        return authService.refresh(request.refreshToken());
+    }
+
+    @PostMapping("/logout")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void logout(@RequestBody RefreshTokenRequest request) {
+        authService.logout(request.refreshToken());
     }
 }

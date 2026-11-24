@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 
@@ -12,7 +13,7 @@ interface AuthContextType {
     isAuthenticated: boolean
     isLoading: boolean
     login: (email: string, password: string) => Promise<void>
-    logout: () => void
+    logout: () => Promise<void>
     register: (
         firstName: string,
         lastName: string,
@@ -53,36 +54,64 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     }
 
-    useEffect(() => {
-        async function restoreAuth() {
-            console.log('[AUTH] Восстановление запущено')
+    async function refreshAccessToken(): Promise<string> {
+        const refreshToken = localStorage.getItem('refreshToken')
 
-            const token = localStorage.getItem('token')
-
-            console.log('[AUTH] Токен найден:', !!token)
-
-            if (!token) {
-                setIsLoading(false)
-                return
-            }
-
-            try {
-                console.log('[AUTH] Отправляем GET /me')
-
-                const currentUser = await getCurrentUser(token)
-
-                console.log('[AUTH] Пользователь:', currentUser)
-
-                setUser(currentUser)
-            } catch (error) {
-                console.error('[AUTH] Ошибка:', error)
-                localStorage.removeItem('token')
-                setUser(null)
-            } finally {
-                setIsLoading(false)
-            }
+        if (!refreshToken) {
+            throw new Error('Refresh token отсутствует')
         }
 
+        const response = await fetch(`${API_URL}/refresh`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken }),
+        })
+
+        if (!response.ok) {
+            throw new Error('Не удалось обновить токен')
+        }
+
+        const data = await response.json()
+
+        localStorage.setItem('token', data.token)
+        localStorage.setItem('refreshToken', data.refreshToken)
+
+        return data.token
+    }
+
+    async function restoreAuth() {
+        const token = localStorage.getItem('token')
+
+        if (!token) {
+            setIsLoading(false)
+            return
+        }
+
+        try {
+            let currentUser: User
+
+            try {
+                currentUser = await getCurrentUser(token)
+            } catch {
+                const newToken = await refreshAccessToken()
+                currentUser = await getCurrentUser(newToken)
+            }
+
+            setUser(currentUser)
+        } catch (error) {
+            console.error('[AUTH] Ошибка восстановления:', error)
+
+            localStorage.removeItem('token')
+            localStorage.removeItem('refreshToken')
+            setUser(null)
+        } finally {
+            setIsLoading(false)
+        }
+    }
+
+    useEffect(() => {
         restoreAuth()
     }, [])
 
@@ -112,6 +141,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         localStorage.setItem('token', data.token)
+        localStorage.setItem('refreshToken', data.refreshToken)
 
         const currentUser = await getCurrentUser(data.token)
         setUser(currentUser)
@@ -133,14 +163,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
 
         localStorage.setItem('token', data.token)
+        localStorage.setItem('refreshToken', data.refreshToken)
 
         const currentUser = await getCurrentUser(data.token)
         setUser(currentUser)
     }
 
-    function logout() {
-        localStorage.removeItem('token')
-        setUser(null)
+    async function logout() {
+        const refreshToken = localStorage.getItem('refreshToken')
+
+        try {
+            if (refreshToken) {
+                await fetch(`${API_URL}/logout`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ refreshToken }),
+                })
+            }
+        } finally {
+            localStorage.removeItem('token')
+            localStorage.removeItem('refreshToken')
+            setUser(null)
+        }
     }
 
     const value: AuthContextType = {

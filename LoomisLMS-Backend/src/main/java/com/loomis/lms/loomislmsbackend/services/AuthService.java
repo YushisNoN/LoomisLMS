@@ -18,13 +18,16 @@ import java.util.UUID;
 public class AuthService {
 
     @Autowired
-    private  UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
-    private  PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private RefreshTokenService refreshTokenService;
 
     public LoginResponse register(RegisterRequest registerRequest) {
         if (userRepository.existsByEmail(registerRequest.email())) {
@@ -32,6 +35,7 @@ public class AuthService {
                     "User with this email already exists"
             );
         }
+
         User user = new User();
         user.setFirstName(registerRequest.firstName());
         user.setLastName(registerRequest.lastName());
@@ -39,14 +43,14 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(registerRequest.password()));
 
         User savedUser = userRepository.save(user);
-        String token = jwtService.generateToken(user);
 
-        return new LoginResponse(token, "Bearer");
+        String token = jwtService.generateToken(savedUser);
+        String refreshToken = refreshTokenService.createRefreshToken(savedUser.getId());
+
+        return new LoginResponse(token, refreshToken, "Bearer");
     }
 
-
     public LoginResponse login(LoginRequest request) {
-
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() ->
                         new BadCredentialsException("Invalid email or password")
@@ -55,16 +59,47 @@ public class AuthService {
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid email or password");
         }
-        String token = jwtService.generateToken(user);
 
-        return new LoginResponse(token, "Bearer");
+        String token = jwtService.generateToken(user);
+        String refreshToken = refreshTokenService.createRefreshToken(user.getId());
+
+        return new LoginResponse(token, refreshToken, "Bearer");
     }
 
     public CurrentUserResponse getCurrentUser(String userId) {
         User user = userRepository.findById(UUID.fromString(userId))
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
         return CurrentUserResponse.from(user);
     }
 
+    public LoginResponse refresh(String refreshToken) {
+        String userId = refreshTokenService.getUserId(refreshToken);
 
+        if (userId == null) {
+            throw new BadCredentialsException("Invalid refresh token");
+        }
+
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() ->
+                        new BadCredentialsException("User not found")
+                );
+
+        String newAccessToken = jwtService.generateToken(user);
+
+        String newRefreshToken = refreshTokenService.rotateRefreshToken(
+                refreshToken,
+                user.getId()
+        );
+
+        return new LoginResponse(
+                newAccessToken,
+                newRefreshToken,
+                "Bearer"
+        );
+    }
+
+    public void logout(String refreshToken) {
+        refreshTokenService.deleteRefreshToken(refreshToken);
+    }
 }
