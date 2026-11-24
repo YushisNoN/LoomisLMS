@@ -7,9 +7,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 
 function RegisterPage() {
-
-
-
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',

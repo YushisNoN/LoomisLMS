@@ -1,4 +1,5 @@
 package com.loomis.lms.loomislmsbackend.services;
+import com.loomis.lms.loomislmsbackend.dto.CurrentUserResponse;
 import com.loomis.lms.loomislmsbackend.dto.LoginRequest;
 import com.loomis.lms.loomislmsbackend.dto.LoginResponse;
 import com.loomis.lms.loomislmsbackend.dto.RegisterRequest;
@@ -10,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -56,4 +59,12 @@ public class AuthService {
 
         return new LoginResponse(token, "Bearer");
     }
+
+    public CurrentUserResponse getCurrentUser(String userId) {
+        User user = userRepository.findById(UUID.fromString(userId))
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return CurrentUserResponse.from(user);
+    }
+
+
 }
