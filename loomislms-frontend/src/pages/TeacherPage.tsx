@@ -184,7 +184,12 @@ function TeacherPage() {
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/20 font-semibold text-violet-300">
                                     {user?.name?.charAt(0).toUpperCase()}
                                 </div>
-
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => navigate('/dashboard')}
+                                >
+                                    На главную
+                                </Button>
                                 <Button
                                     variant="secondary"
                                     onClick={logout}

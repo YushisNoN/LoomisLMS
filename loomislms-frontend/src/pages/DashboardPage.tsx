@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
+import { useNavigate } from 'react-router-dom'
 
 interface Course {
     id: string
@@ -11,7 +12,7 @@ interface Course {
 
 function DashboardPage() {
     const { user, logout } = useAuth()
-
+    const navigate = useNavigate()
     const [courses, setCourses] = useState<Course[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState('')
@@ -125,7 +126,14 @@ function DashboardPage() {
                                 <div className="flex h-11 w-11 items-center justify-center rounded-full border border-violet-400/30 bg-violet-500/20 font-semibold text-violet-300">
                                     {user?.name?.charAt(0).toUpperCase()}
                                 </div>
-
+                                {user?.role === 'TEACHER' && (
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => navigate('/teacher')}
+                                    >
+                                        Панель преподавателя
+                                    </Button>
+                                )}
                                 <Button
                                     variant="secondary"
                                     onClick={logout}
