@@ -1,9 +1,10 @@
+
 @import "tailwindcss";
+@import "katex/dist/katex.min.css";
 
 /*
     DESIGN TOKENS
- */
-
+*/
 
 @theme {
     /* Backgrounds */
@@ -64,7 +65,6 @@ body {
     margin: 0;
     min-width: 320px;
     min-height: 100vh;
-
     background-color: var(--color-app);
     color: var(--color-text);
 }
@@ -78,4 +78,160 @@ input,
 textarea,
 select {
     font: inherit;
+}
+
+/*
+    MARKDOWN PREVIEW
+*/
+
+.markdown-preview {
+    color: var(--color-text);
+    font-size: 15px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+
+.markdown-preview > *:first-child {
+    margin-top: 0;
+}
+
+.markdown-preview > *:last-child {
+    margin-bottom: 0;
+}
+
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3,
+.markdown-preview h4 {
+    color: white;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.markdown-preview h1 {
+    margin: 28px 0 16px;
+    font-size: 2rem;
+}
+
+.markdown-preview h2 {
+    margin: 24px 0 14px;
+    font-size: 1.5rem;
+}
+
+.markdown-preview h3 {
+    margin: 20px 0 12px;
+    font-size: 1.2rem;
+}
+
+.markdown-preview p {
+    margin: 12px 0;
+}
+
+.markdown-preview a {
+    color: var(--color-primary-hover);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.markdown-preview ul,
+.markdown-preview ol {
+    margin: 14px 0;
+    padding-left: 26px;
+}
+
+.markdown-preview ul {
+    list-style: disc;
+}
+
+.markdown-preview ol {
+    list-style: decimal;
+}
+
+.markdown-preview li {
+    margin: 5px 0;
+}
+
+.markdown-preview blockquote {
+    margin: 18px 0;
+    padding: 12px 18px;
+    border-left: 3px solid var(--color-primary);
+    border-radius: 0 10px 10px 0;
+    background: rgba(121, 104, 242, 0.08);
+    color: var(--color-text-secondary);
+}
+
+.markdown-preview hr {
+    margin: 24px 0;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.markdown-preview table {
+    width: 100%;
+    margin: 18px 0;
+    border-collapse: collapse;
+    overflow: hidden;
+}
+
+.markdown-preview th,
+.markdown-preview td {
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    text-align: left;
+}
+
+.markdown-preview th {
+    background: var(--color-surface-elevated);
+    color: white;
+    font-weight: 600;
+}
+
+.markdown-preview td {
+    background: var(--color-surface);
+}
+
+.markdown-preview :not(pre) > code {
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--color-surface-elevated);
+    color: #C4B9FF;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.markdown-preview pre {
+    margin: 18px 0;
+    padding: 18px;
+    overflow-x: auto;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: #0A0D18;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+.markdown-preview pre code {
+    font-family: inherit;
+}
+
+.markdown-preview img {
+    max-width: 100%;
+    border-radius: 12px;
+}
+
+.markdown-preview strong {
+    color: white;
+    font-weight: 700;
+}
+
+.markdown-preview .katex-display {
+    margin: 24px 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 0;
+}
+
+.markdown-preview .katex {
+    color: #E5DEFF;
 }

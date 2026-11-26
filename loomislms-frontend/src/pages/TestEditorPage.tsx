@@ -1,6 +1,8 @@
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import MarkdownEditor from '../components/editor/MarkdownEditor'
+import MarkdownPreview from '../components/editor/MarkdownPreview'
 
 type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TEXT'
 
@@ -212,8 +214,10 @@ function TestEditorPage() {
                 return
             }
 
-            if (type === 'SINGLE_CHOICE' &&
-                options.filter(option => option.correct).length !== 1) {
+            if (
+                type === 'SINGLE_CHOICE' &&
+                options.filter(option => option.correct).length !== 1
+            ) {
                 setError('Выберите только один правильный ответ')
                 return
             }
@@ -432,17 +436,15 @@ function TestEditorPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-sm text-gray-400">
+                                    <label className="mb-3 block text-sm text-gray-400">
                                         Текст вопроса
                                     </label>
 
-                                    <textarea
+                                    <MarkdownEditor
                                         value={question}
-                                        onChange={e => setQuestion(e.target.value)}
-                                        rows={4}
-                                        required
-                                        placeholder="Введите вопрос..."
-                                        className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500"
+                                        onChange={setQuestion}
+                                        placeholder="Введите вопрос. Формулы можно писать через $...$ или $$...$$"
+                                        minHeight={350}
                                     />
                                 </div>
 
@@ -549,16 +551,15 @@ function TestEditorPage() {
                                 )}
 
                                 <div>
-                                    <label className="mb-2 block text-sm text-gray-400">
+                                    <label className="mb-3 block text-sm text-gray-400">
                                         Пояснение к ответу
                                     </label>
 
-                                    <textarea
+                                    <MarkdownEditor
                                         value={explanation}
-                                        onChange={e => setExplanation(e.target.value)}
-                                        rows={3}
-                                        placeholder="Почему этот ответ правильный?"
-                                        className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500"
+                                        onChange={setExplanation}
+                                        placeholder="Объясни, почему ответ правильный. Можно использовать формулы LaTeX."
+                                        minHeight={250}
                                     />
                                 </div>
 
@@ -617,11 +618,9 @@ function TestEditorPage() {
                                                 </span>
                                             </div>
 
-                                            <p className="mb-4 font-medium">
-                                                {item.question}
-                                            </p>
+                                            <MarkdownPreview content={item.question} />
 
-                                            <div className="flex gap-4">
+                                            <div className="mt-4 flex gap-4">
                                                 <button
                                                     onClick={() => editQuestion(item)}
                                                     className="text-sm text-violet-400 hover:text-violet-300"

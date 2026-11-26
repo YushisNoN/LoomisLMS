@@ -10,6 +10,7 @@ import TeacherPage from '../pages/TeacherPage'
 import CoursePage from '../pages/CoursePage'
 import LessonPage from '../pages/LessonPage'
 import TestEditorPage from '../pages/TestEditorPage'
+import MarkdownTestPage from '../pages/MarkdownTestPage'
 
 function App() {
     return (
@@ -36,6 +37,7 @@ function App() {
                             element={<TestEditorPage />}
                         />
                     </Route>
+                    <Route path="/markdown-test" element={<MarkdownTestPage />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/login" replace />} />

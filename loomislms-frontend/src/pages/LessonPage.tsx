@@ -1,6 +1,7 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import MarkdownEditor from '../components/editor/MarkdownEditor'
 
 interface Lesson {
     id: string
@@ -87,7 +88,7 @@ function LessonPage() {
         }
     }, [id, moduleId, lessonId, navigate])
 
-    async function handleSave(e: React.FormEvent<HTMLFormElement>) {
+    async function handleSave(e: FormEvent<HTMLFormElement>) {
         e.preventDefault()
 
         setError('')
@@ -141,7 +142,7 @@ function LessonPage() {
 
     return (
         <div className="min-h-screen bg-[#0b0b12] p-8 text-white">
-            <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-6xl">
 
                 <div className="mb-8 flex items-center gap-4">
                     <button
@@ -189,6 +190,7 @@ function LessonPage() {
                         </div>
 
                         <form onSubmit={handleSave} className="space-y-6">
+
                             <div>
                                 <label className="mb-2 block text-sm text-gray-400">
                                     Название урока
@@ -205,17 +207,26 @@ function LessonPage() {
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm text-gray-400">
+                                <label className="mb-3 block text-sm text-gray-400">
                                     Содержание урока
                                 </label>
 
-                                <textarea
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows={14}
-                                    placeholder="Введите содержание урока..."
-                                    className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none transition focus:border-violet-500/50"
-                                />
+                                {lesson.type === 'TEXT' ? (
+                                    <MarkdownEditor
+                                        value={content}
+                                        onChange={setContent}
+                                        placeholder="Напиши теорию урока..."
+                                        minHeight={600}
+                                    />
+                                ) : (
+                                    <textarea
+                                        value={content}
+                                        onChange={(e) => setContent(e.target.value)}
+                                        rows={14}
+                                        placeholder="Введите содержание лекции..."
+                                        className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none transition focus:border-violet-500/50"
+                                    />
+                                )}
                             </div>
 
                             {success && (
@@ -231,6 +242,7 @@ function LessonPage() {
                             >
                                 {isSaving ? 'Сохранение...' : 'Сохранить изменения'}
                             </button>
+
                         </form>
                     </div>
                 )}
