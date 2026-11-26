@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -5,12 +6,13 @@ interface Lesson {
     id: string
     title: string
     content: string | null
+    type: 'LECTURE' | 'TEXT' | 'TEST' | 'CODING_TASK'
     position: number
     createdAt: string
 }
 
 function LessonPage() {
-    const { id, lessonId } = useParams()
+    const { id, moduleId, lessonId } = useParams()
     const navigate = useNavigate()
 
     const [lesson, setLesson] = useState<Lesson | null>(null)
@@ -36,7 +38,7 @@ function LessonPage() {
                 }
 
                 const response = await fetch(
-                    `http://localhost:8080/api/courses/${id}/lessons/${lessonId}`,
+                    `http://localhost:8080/api/courses/${id}/modules/${moduleId}/lessons/${lessonId}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`,
@@ -45,16 +47,24 @@ function LessonPage() {
                 )
 
                 if (!response.ok) {
-                    throw new Error('Не удалось загрузить урок')
+                    throw new Error(`Не удалось загрузить урок: ${response.status}`)
                 }
 
                 const data: Lesson = await response.json()
 
-                if (isActive) {
-                    setLesson(data)
-                    setTitle(data.title)
-                    setContent(data.content || '')
+                if (!isActive) return
+
+                if (data.type === 'TEST') {
+                    navigate(
+                        `/teacher/courses/${id}/modules/${moduleId}/lessons/${lessonId}/test`,
+                        { replace: true }
+                    )
+                    return
                 }
+
+                setLesson(data)
+                setTitle(data.title)
+                setContent(data.content || '')
             } catch (err) {
                 if (isActive) {
                     setError(
@@ -75,7 +85,7 @@ function LessonPage() {
         return () => {
             isActive = false
         }
-    }, [id, lessonId])
+    }, [id, moduleId, lessonId, navigate])
 
     async function handleSave(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault()
@@ -92,7 +102,7 @@ function LessonPage() {
             }
 
             const response = await fetch(
-                `http://localhost:8080/api/courses/${id}/lessons/${lessonId}`,
+                `http://localhost:8080/api/courses/${id}/modules/${moduleId}/lessons/${lessonId}`,
                 {
                     method: 'PUT',
                     headers: {
@@ -102,6 +112,7 @@ function LessonPage() {
                     body: JSON.stringify({
                         title,
                         content,
+                        type: lesson?.type,
                     }),
                 }
             )
@@ -149,9 +160,7 @@ function LessonPage() {
                 </div>
 
                 {isLoading && (
-                    <p className="text-gray-400">
-                        Загрузка урока...
-                    </p>
+                    <p className="text-gray-400">Загрузка урока...</p>
                 )}
 
                 {error && (
@@ -169,7 +178,9 @@ function LessonPage() {
                             </p>
 
                             <h1 className="text-3xl font-bold">
-                                Редактирование урока
+                                {lesson.type === 'LECTURE'
+                                    ? 'Редактор лекции'
+                                    : 'Редактор теории'}
                             </h1>
 
                             <p className="mt-2 text-sm text-gray-500">
@@ -177,10 +188,7 @@ function LessonPage() {
                             </p>
                         </div>
 
-                        <form
-                            onSubmit={handleSave}
-                            className="space-y-6"
-                        >
+                        <form onSubmit={handleSave} className="space-y-6">
                             <div>
                                 <label className="mb-2 block text-sm text-gray-400">
                                     Название урока

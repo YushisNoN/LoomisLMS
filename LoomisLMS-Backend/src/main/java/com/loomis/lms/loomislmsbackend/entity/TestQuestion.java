@@ -1,7 +1,5 @@
 package com.loomis.lms.loomislmsbackend.entity;
 
-package com.loomis.lms.loomislmsbackend.entity;
-
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
