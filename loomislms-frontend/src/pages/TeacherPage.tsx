@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
+import { useNavigate } from 'react-router-dom'
 
 interface Course {
     id: string
@@ -11,7 +12,7 @@ interface Course {
 
 function TeacherPage() {
     const { user, logout } = useAuth()
-
+    const navigate = useNavigate()
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [isCreating, setIsCreating] = useState(false)
@@ -360,7 +361,8 @@ function TeacherPage() {
                                     {courses.map((course) => (
                                         <div
                                             key={course.id}
-                                            className="rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-violet-500/30"
+                                            onClick={() => navigate(`/teacher/courses/${course.id}`)}
+                                            className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-violet-500/30 hover:bg-white/[0.04]"
                                         >
                                             <div className="mb-4 flex items-start justify-between gap-3">
                                                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-xl text-violet-300">

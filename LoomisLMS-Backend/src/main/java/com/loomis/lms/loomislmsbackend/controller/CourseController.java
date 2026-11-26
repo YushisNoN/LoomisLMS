@@ -61,4 +61,16 @@ public class CourseController {
             throw new AccessDeniedException("Недостаточно прав");
         }
     }
+
+    @GetMapping("/{id}")
+    public CourseResponse getTeacherCourse(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        requireTeacher(authentication);
+
+        UUID teacherId = UUID.fromString(authentication.getName());
+
+        return courseService.getTeacherCourse(id, teacherId);
+    }
 }
