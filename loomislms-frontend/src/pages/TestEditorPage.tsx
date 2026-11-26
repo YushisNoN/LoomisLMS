@@ -1,7 +1,6 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import MarkdownEditor from '../components/editor/MarkdownEditor'
 import MarkdownPreview from '../components/editor/MarkdownPreview'
 
 type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TEXT'
@@ -20,6 +19,146 @@ interface TestQuestion {
     position: number
     options: AnswerOption[]
     acceptedTextAnswers: string[]
+}
+
+interface FormulaFieldProps {
+    value: string
+    onChange: (value: string) => void
+    placeholder: string
+    multiline?: boolean
+    rows?: number
+}
+
+function FormulaField({
+                          value,
+                          onChange,
+                          placeholder,
+                          multiline = false,
+                          rows = 3,
+                      }: FormulaFieldProps) {
+    const fieldRef = useRef<HTMLTextAreaElement | HTMLInputElement>(null)
+
+    const [formulaOpen, setFormulaOpen] = useState(false)
+    const [formula, setFormula] = useState('')
+
+    function insertFormula() {
+        const latex = formula.trim()
+
+        if (!latex) return
+
+        const field = fieldRef.current
+        const start = field?.selectionStart ?? value.length
+        const end = field?.selectionEnd ?? value.length
+
+        const formattedFormula = `$${latex}$`
+        const newValue =
+            value.slice(0, start) +
+            formattedFormula +
+            value.slice(end)
+
+        onChange(newValue)
+        setFormula('')
+        setFormulaOpen(false)
+
+        requestAnimationFrame(() => {
+            const updatedField = fieldRef.current
+
+            if (updatedField) {
+                updatedField.focus()
+
+                const cursor = start + formattedFormula.length
+                updatedField.setSelectionRange(cursor, cursor)
+            }
+        })
+    }
+
+    return (
+        <div className="space-y-2">
+            {multiline ? (
+                <textarea
+                    ref={fieldRef as React.RefObject<HTMLTextAreaElement>}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    rows={rows}
+                    placeholder={placeholder}
+                    className="w-full resize-y rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500"
+                />
+            ) : (
+                <input
+                    ref={fieldRef as React.RefObject<HTMLInputElement>}
+                    value={value}
+                    onChange={e => onChange(e.target.value)}
+                    placeholder={placeholder}
+                    className="min-w-0 w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500"
+                />
+            )}
+
+            <button
+                type="button"
+                onClick={() => setFormulaOpen(!formulaOpen)}
+                className={`text-xs font-medium transition ${
+                    formulaOpen
+                        ? 'text-violet-300'
+                        : 'text-gray-500 hover:text-violet-400'
+                }`}
+            >
+                ƒx {formulaOpen ? 'Закрыть формулу' : 'Вставить формулу'}
+            </button>
+
+            {formulaOpen && (
+                <div className="rounded-xl border border-violet-500/20 bg-violet-500/[0.04] p-3">
+                    <p className="mb-2 text-xs text-gray-400">
+                        Введи формулу в формате LaTeX
+                    </p>
+
+                    <input
+                        value={formula}
+                        onChange={e => setFormula(e.target.value)}
+                        onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                                e.preventDefault()
+                                insertFormula()
+                            }
+                        }}
+                        placeholder="Например: \frac{a}{b}"
+                        className="w-full rounded-lg border border-white/10 bg-[#0b0b12] px-3 py-2 text-sm text-white outline-none focus:border-violet-500"
+                    />
+
+                    {formula.trim() && (
+                        <div className="mt-3 rounded-lg bg-[#0b0b12] p-3">
+                            <p className="mb-2 text-xs text-gray-500">
+                                Предпросмотр
+                            </p>
+
+                            <MarkdownPreview content={`$${formula}$`} />
+                        </div>
+                    )}
+
+                    <div className="mt-3 flex justify-end gap-2">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setFormula('')
+                                setFormulaOpen(false)
+                            }}
+                            className="rounded-lg px-3 py-2 text-xs text-gray-400 hover:text-white"
+                        >
+                            Отмена
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={insertFormula}
+                            disabled={!formula.trim()}
+                            className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white transition hover:bg-violet-500 disabled:opacity-40"
+                        >
+                            Вставить
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }
 
 function TestEditorPage() {
@@ -436,15 +575,16 @@ function TestEditorPage() {
                                 </div>
 
                                 <div>
-                                    <label className="mb-3 block text-sm text-gray-400">
+                                    <label className="mb-2 block text-sm text-gray-400">
                                         Текст вопроса
                                     </label>
 
-                                    <MarkdownEditor
+                                    <FormulaField
                                         value={question}
                                         onChange={setQuestion}
-                                        placeholder="Введите вопрос. Формулы можно писать через $...$ или $$...$$"
-                                        minHeight={350}
+                                        multiline
+                                        rows={4}
+                                        placeholder="Введите текст вопроса..."
                                     />
                                 </div>
 
@@ -464,11 +604,11 @@ function TestEditorPage() {
                                             </button>
                                         </div>
 
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             {options.map((option, index) => (
                                                 <div
                                                     key={index}
-                                                    className="flex items-center gap-3"
+                                                    className="flex items-start gap-3"
                                                 >
                                                     <input
                                                         type={type === 'SINGLE_CHOICE' ? 'radio' : 'checkbox'}
@@ -476,23 +616,24 @@ function TestEditorPage() {
                                                         onChange={e =>
                                                             updateOption(index, 'correct', e.target.checked)
                                                         }
-                                                        className="h-4 w-4 accent-violet-500"
+                                                        className="mt-4 h-4 w-4 shrink-0 accent-violet-500"
                                                     />
 
-                                                    <input
-                                                        value={option.text}
-                                                        onChange={e =>
-                                                            updateOption(index, 'text', e.target.value)
-                                                        }
-                                                        placeholder={`Вариант ${index + 1}`}
-                                                        className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500"
-                                                    />
+                                                    <div className="min-w-0 flex-1">
+                                                        <FormulaField
+                                                            value={option.text}
+                                                            onChange={value =>
+                                                                updateOption(index, 'text', value)
+                                                            }
+                                                            placeholder={`Вариант ${index + 1}`}
+                                                        />
+                                                    </div>
 
                                                     <button
                                                         type="button"
                                                         onClick={() => removeOption(index)}
                                                         disabled={options.length <= 2}
-                                                        className="px-2 text-gray-500 transition hover:text-red-400 disabled:opacity-30"
+                                                        className="mt-3 px-2 text-gray-500 transition hover:text-red-400 disabled:opacity-30"
                                                     >
                                                         ✕
                                                     </button>
@@ -551,15 +692,16 @@ function TestEditorPage() {
                                 )}
 
                                 <div>
-                                    <label className="mb-3 block text-sm text-gray-400">
+                                    <label className="mb-2 block text-sm text-gray-400">
                                         Пояснение к ответу
                                     </label>
 
-                                    <MarkdownEditor
+                                    <FormulaField
                                         value={explanation}
                                         onChange={setExplanation}
-                                        placeholder="Объясни, почему ответ правильный. Можно использовать формулы LaTeX."
-                                        minHeight={250}
+                                        multiline
+                                        rows={3}
+                                        placeholder="Почему этот ответ правильный?"
                                     />
                                 </div>
 
@@ -619,6 +761,35 @@ function TestEditorPage() {
                                             </div>
 
                                             <MarkdownPreview content={item.question} />
+
+                                            {item.options.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    {item.options.map((option, optionIndex) => (
+                                                        <div
+                                                            key={option.id || optionIndex}
+                                                            className="flex gap-2 text-sm"
+                                                        >
+                                                            <span className={option.correct ? 'text-green-400' : 'text-gray-500'}>
+                                                                {option.correct ? '✓' : '○'}
+                                                            </span>
+
+                                                            <div className="min-w-0 flex-1">
+                                                                <MarkdownPreview content={option.text} />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {item.explanation && (
+                                                <div className="mt-3 border-t border-white/10 pt-3">
+                                                    <p className="mb-1 text-xs text-gray-500">
+                                                        Пояснение
+                                                    </p>
+
+                                                    <MarkdownPreview content={item.explanation} />
+                                                </div>
+                                            )}
 
                                             <div className="mt-4 flex gap-4">
                                                 <button

@@ -48,6 +48,15 @@ public class Lesson {
     @OrderBy("position ASC")
     private List<TestQuestion> questions = new ArrayList<>();
 
+    @OneToMany(
+            mappedBy = "lesson",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("position ASC")
+    private List<LessonBlock> blocks = new ArrayList<>();
+
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
