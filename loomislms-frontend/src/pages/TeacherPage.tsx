@@ -10,6 +10,14 @@ interface Course {
     createdAt: string
 }
 
+interface Course {
+    id: string
+    title: string
+    description: string | null
+    createdAt: string
+    published: boolean
+}
+
 function TeacherPage() {
     const { user, logout } = useAuth()
     const navigate = useNavigate()
@@ -20,6 +28,10 @@ function TeacherPage() {
     const [success, setSuccess] = useState('')
     const [courses, setCourses] = useState<Course[]>([])
     const [isLoadingCourses, setIsLoadingCourses] = useState(true)
+
+    const [updatingCourseId, setUpdatingCourseId] = useState<string | null>(null)
+    const [courseActionError, setCourseActionError] = useState('')
+    const [courseActionSuccess, setCourseActionSuccess] = useState('')
 
     async function loadCourses() {
         try {
@@ -95,6 +107,59 @@ function TeacherPage() {
             setIsCreating(false)
         }
     }
+
+    async function handleTogglePublish(course: Course) {
+        setCourseActionError('')
+        setCourseActionSuccess('')
+        setUpdatingCourseId(course.id)
+
+        try {
+            const token = localStorage.getItem('token')
+
+            const action = course.published ? 'unpublish' : 'publish'
+
+            const response = await fetch(
+                `http://localhost:8080/api/courses/${course.id}/${action}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            )
+
+            if (!response.ok) {
+                const message = await response.text()
+                throw new Error(message || 'Не удалось изменить статус курса')
+            }
+
+            setCourses(prev =>
+                prev.map(item =>
+                    item.id === course.id
+                        ? { ...item, published: !course.published }
+                        : item
+                )
+            )
+
+            setCourseActionSuccess(
+                course.published
+                    ? 'Курс снят с публикации'
+                    : 'Курс успешно опубликован!'
+            )
+        } catch (err) {
+            setCourseActionError(
+                err instanceof Error
+                    ? err.message
+                    : 'Ошибка изменения статуса курса'
+            )
+        } finally {
+            setUpdatingCourseId(null)
+        }
+    }
+
+    const totalCourses = courses.length
+    const publishedCourses = courses.filter(course => course.published).length
+    const draftCourses = totalCourses - publishedCourses
 
     return (
         <div className="min-h-screen bg-[#0b0b12] text-white">
@@ -236,24 +301,24 @@ function TeacherPage() {
 
                             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                                 <StatCard
-                                    icon="▤"
-                                    label="Всего курсов"
-                                    value="0"
-                                    description="Созданные курсы"
-                                />
-
-                                <StatCard
                                     icon="◷"
                                     label="Черновики"
-                                    value="0"
+                                    value={String(draftCourses)}
                                     description="Не опубликованы"
                                 />
 
                                 <StatCard
                                     icon="✓"
                                     label="Опубликовано"
-                                    value="0"
+                                    value={String(publishedCourses)}
                                     description="Доступны ученикам"
+                                />
+
+                                <StatCard
+                                    icon="♙"
+                                    label="Ученики"
+                                    value="0"
+                                    description="Записаны на курсы"
                                 />
 
                                 <StatCard
@@ -341,6 +406,17 @@ function TeacherPage() {
                                     Управление учебными программами
                                 </p>
                             </div>
+                            {courseActionError && (
+                                <p className="mb-4 text-sm text-red-400">
+                                    {courseActionError}
+                                </p>
+                            )}
+
+                            {courseActionSuccess && (
+                                <p className="mb-4 text-sm text-green-400">
+                                    {courseActionSuccess}
+                                </p>
+                            )}
 
                             {isLoadingCourses ? (
                                 <div className="py-12 text-center text-sm text-gray-500">
@@ -374,7 +450,15 @@ function TeacherPage() {
                                                     ▤
                                                 </div>
 
-                                                <span className="inline-flex items-center justify-center rounded-full border border-yellow-500/20 bg-yellow-500/10 px-3 py-1 text-xs leading-none text-yellow-400">Черновик</span>
+                                                <span
+                                                    className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-xs leading-none ${
+                                                        course.published
+                                                            ? 'border-green-500/20 bg-green-500/10 text-green-400'
+                                                            : 'border-yellow-500/20 bg-yellow-500/10 text-yellow-400'
+                                                    }`}
+                                                >
+                                                    {course.published ? 'Опубликован' : 'Черновик'}
+                                                </span>
                                             </div>
 
                                             <h4 className="font-semibold">
@@ -387,6 +471,22 @@ function TeacherPage() {
 
                                             <div className="mt-5 border-t border-white/10 pt-4 text-xs text-gray-600">
                                                 Создан: {new Date(course.createdAt).toLocaleDateString('ru-RU')}
+                                            </div>
+                                            <div
+                                                className="mt-4"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <Button
+                                                    variant="secondary"
+                                                    disabled={updatingCourseId === course.id}
+                                                    onClick={() => handleTogglePublish(course)}
+                                                >
+                                                    {updatingCourseId === course.id
+                                                        ? 'Обновление...'
+                                                        : course.published
+                                                            ? 'Снять с публикации'
+                                                            : 'Опубликовать'}
+                                                </Button>
                                             </div>
                                         </div>
                                     ))}

@@ -9,14 +9,16 @@ public record CourseResponse(
         UUID id,
         String title,
         String description,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        Boolean published
 ) {
     public static CourseResponse from(Course course) {
         return new CourseResponse(
                 course.getId(),
                 course.getTitle(),
                 course.getDescription(),
-                course.getCreatedAt()
+                course.getCreatedAt(),
+                course.isPublished()
         );
     }
 }

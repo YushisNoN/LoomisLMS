@@ -22,6 +22,14 @@ interface LessonBlock {
     position: number
 }
 
+interface UploadedFile {
+    id: string
+    originalName: string
+    contentType: string
+    size: number
+    url: string
+}
+
 const blockTypes: { type: BlockType; label: string; description: string }[] = [
     { type: 'TEXT', label: 'Текст', description: 'Текст с Markdown и формулами' },
     { type: 'VIDEO', label: 'Видео', description: 'Встроенный видеоплеер YouTube' },
@@ -68,6 +76,9 @@ function LessonPage() {
     const [isSaving, setIsSaving] = useState(false)
     const [error, setError] = useState('')
     const [success, setSuccess] = useState('')
+
+    const [uploadingBlocks, setUploadingBlocks] = useState<Record<string, boolean>>({})
+    const [uploadedFileNames, setUploadedFileNames] = useState<Record<string, string>>({})
 
     const baseUrl = `http://localhost:8080/api/courses/${id}/modules/${moduleId}/lessons/${lessonId}`
     const blocksUrl = `${baseUrl}/blocks`
@@ -373,6 +384,77 @@ function LessonPage() {
         }
     }
 
+    async function uploadBlockFile(block: LessonBlock, file: File) {
+        setError('')
+        setSuccess('')
+
+        const token = localStorage.getItem('token')
+
+        if (!token) {
+            setError('Необходимо авторизоваться')
+            return
+        }
+
+        const allowedTypes: Record<BlockType, string[]> = {
+            TEXT: [],
+            VIDEO: ['video/mp4', 'video/webm'],
+            PRESENTATION: [
+                'application/pdf',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            ],
+            IMAGE: ['image/png', 'image/jpeg', 'image/webp'],
+            DIVIDER: [],
+        }
+
+        if (!allowedTypes[block.type].includes(file.type)) {
+            setError('Формат файла не поддерживается для этого блока')
+            return
+        }
+
+        const formData = new FormData()
+        formData.append('file', file)
+
+        setUploadingBlocks(previous => ({
+            ...previous,
+            [block.localKey]: true,
+        }))
+
+        try {
+            const response = await fetch(`${baseUrl}/files`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                body: formData,
+            })
+
+            if (!response.ok) {
+                const message = await response.text()
+                throw new Error(message || `Ошибка загрузки: ${response.status}`)
+            }
+
+            const uploadedFile: UploadedFile = await response.json()
+
+            updateBlock(block.localKey, uploadedFile.url)
+
+            setUploadedFileNames(previous => ({
+                ...previous,
+                [block.localKey]: uploadedFile.originalName,
+            }))
+
+            setSuccess(`Файл «${uploadedFile.originalName}» загружен`)
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : 'Не удалось загрузить файл'
+            )
+        } finally {
+            setUploadingBlocks(previous => ({
+                ...previous,
+                [block.localKey]: false,
+            }))
+        }
+    }
+
     function renderBlockContent(block: LessonBlock) {
         switch (block.type) {
             case 'TEXT':
@@ -385,56 +467,79 @@ function LessonPage() {
                     />
                 )
 
-            case 'VIDEO': {
-                const embedUrl = getYouTubeEmbedUrl(block.content)
-
+            case 'VIDEO':
                 return (
                     <div className="space-y-4">
-                        <input
-                            value={block.content}
-                            onChange={e => updateBlock(block.localKey, e.target.value)}
-                            placeholder="Вставь ссылку на YouTube..."
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500/50"
-                        />
+                        <label className="block cursor-pointer rounded-xl border border-dashed border-violet-500/30 bg-violet-500/5 p-6 text-center transition hover:bg-violet-500/10">
+                            <input
+                                type="file"
+                                accept="video/mp4,video/webm"
+                                className="hidden"
+                                disabled={uploadingBlocks[block.localKey]}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) uploadBlockFile(block, file)
+                                    e.target.value = ''
+                                }}
+                            />
 
-                        {embedUrl && (
-                            <div className="aspect-video overflow-hidden rounded-xl border border-white/10">
-                                <iframe
-                                    src={embedUrl}
-                                    title="Видео лекции"
-                                    className="h-full w-full"
-                                    allowFullScreen
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                />
-                            </div>
-                        )}
-
-                        {block.content && !embedUrl && (
-                            <p className="text-sm text-yellow-400">
-                                Не удалось распознать ссылку YouTube
+                            <p className="font-medium text-violet-300">
+                                {uploadingBlocks[block.localKey]
+                                    ? 'Загрузка видео...'
+                                    : 'Выбрать видео'}
                             </p>
+                            <p className="mt-2 text-xs text-gray-500">
+                                MP4 или WebM · Максимум 500 МБ
+                            </p>
+                        </label>
+
+                        {block.content && (
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                                <p className="text-sm text-green-400">
+                                    Видео прикреплено
+                                </p>
+                                <p className="mt-1 break-all text-xs text-gray-500">
+                                    {uploadedFileNames[block.localKey] || block.content}
+                                </p>
+                            </div>
                         )}
                     </div>
                 )
-            }
 
             case 'PRESENTATION':
                 return (
                     <div className="space-y-4">
-                        <input
-                            value={block.content}
-                            onChange={e => updateBlock(block.localKey, e.target.value)}
-                            placeholder="Ссылка на PDF-презентацию..."
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500/50"
-                        />
+                        <label className="block cursor-pointer rounded-xl border border-dashed border-violet-500/30 bg-violet-500/5 p-6 text-center transition hover:bg-violet-500/10">
+                            <input
+                                type="file"
+                                accept=".pdf,.pptx,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                                className="hidden"
+                                disabled={uploadingBlocks[block.localKey]}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) uploadBlockFile(block, file)
+                                    e.target.value = ''
+                                }}
+                            />
+
+                            <p className="font-medium text-violet-300">
+                                {uploadingBlocks[block.localKey]
+                                    ? 'Загрузка презентации...'
+                                    : 'Выбрать презентацию'}
+                            </p>
+                            <p className="mt-2 text-xs text-gray-500">
+                                PDF или PPTX · Максимум 500 МБ
+                            </p>
+                        </label>
 
                         {block.content && (
-                            <div className="overflow-hidden rounded-xl border border-white/10">
-                                <iframe
-                                    src={block.content}
-                                    title="Презентация"
-                                    className="h-[600px] w-full bg-white"
-                                />
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                                <p className="text-sm text-green-400">
+                                    Презентация прикреплена
+                                </p>
+                                <p className="mt-1 break-all text-xs text-gray-500">
+                                    {uploadedFileNames[block.localKey] || block.content}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -443,20 +548,37 @@ function LessonPage() {
             case 'IMAGE':
                 return (
                     <div className="space-y-4">
-                        <input
-                            value={block.content}
-                            onChange={e => updateBlock(block.localKey, e.target.value)}
-                            placeholder="Ссылка на изображение..."
-                            className="w-full rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white outline-none focus:border-violet-500/50"
-                        />
+                        <label className="block cursor-pointer rounded-xl border border-dashed border-violet-500/30 bg-violet-500/5 p-6 text-center transition hover:bg-violet-500/10">
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg,image/webp"
+                                className="hidden"
+                                disabled={uploadingBlocks[block.localKey]}
+                                onChange={e => {
+                                    const file = e.target.files?.[0]
+                                    if (file) uploadBlockFile(block, file)
+                                    e.target.value = ''
+                                }}
+                            />
+
+                            <p className="font-medium text-violet-300">
+                                {uploadingBlocks[block.localKey]
+                                    ? 'Загрузка изображения...'
+                                    : 'Выбрать изображение'}
+                            </p>
+                            <p className="mt-2 text-xs text-gray-500">
+                                PNG, JPG или WEBP
+                            </p>
+                        </label>
 
                         {block.content && (
-                            <div className="overflow-hidden rounded-xl border border-white/10 bg-black/20 p-3">
-                                <img
-                                    src={block.content}
-                                    alt="Изображение лекции"
-                                    className="mx-auto max-h-[500px] max-w-full object-contain"
-                                />
+                            <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
+                                <p className="text-sm text-green-400">
+                                    Изображение прикреплено
+                                </p>
+                                <p className="mt-1 break-all text-xs text-gray-500">
+                                    {uploadedFileNames[block.localKey] || block.content}
+                                </p>
                             </div>
                         )}
                     </div>

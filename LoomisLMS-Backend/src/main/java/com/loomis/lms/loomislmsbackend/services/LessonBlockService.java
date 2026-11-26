@@ -6,6 +6,7 @@ import com.loomis.lms.loomislmsbackend.entity.LessonBlock;
 import com.loomis.lms.loomislmsbackend.entity.LessonBlockType;
 import com.loomis.lms.loomislmsbackend.entity.LessonType;
 import com.loomis.lms.loomislmsbackend.repository.LessonBlockRepository;
+import com.loomis.lms.loomislmsbackend.repository.CourseRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,10 +22,12 @@ public class LessonBlockService {
 
     private final LessonBlockRepository lessonBlockRepository;
     private final LessonService lessonService;
+    private final CourseRepository courseRepository;
 
-    public LessonBlockService(LessonBlockRepository lessonBlockRepository, LessonService lessonService) {
+    public LessonBlockService(LessonBlockRepository lessonBlockRepository, LessonService lessonService, CourseRepository courseRepository) {
         this.lessonBlockRepository = lessonBlockRepository;
         this.lessonService = lessonService;
+        this.courseRepository = courseRepository;
     }
 
     public List<LessonBlock> getBlocks(UUID courseId, UUID moduleId, UUID lessonId, UUID teacherId) {
@@ -188,5 +191,23 @@ public class LessonBlockService {
                     "Содержимое блока не может быть пустым"
             );
         }
+    }
+
+    public List<LessonBlock> getStudentBlocks(UUID courseId, UUID moduleId, UUID lessonId) {
+        courseRepository.findByIdAndPublishedTrue(courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Опубликованный курс не найден"
+                ));
+
+        Lesson lesson = lessonService.getPublishedLesson(courseId, moduleId, lessonId);
+        if (lesson.getType() != LessonType.LECTURE) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Блоки доступны только для лекций"
+            );
+        }
+
+        return lessonBlockRepository.findAllByLesson_IdOrderByPositionAsc(lessonId);
     }
 }

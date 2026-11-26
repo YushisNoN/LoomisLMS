@@ -105,4 +105,14 @@ public class ModuleService {
                         "Курс не найден"
                 ));
     }
+
+    public List<Module> getPublishedCourseModules(UUID courseId) {
+        courseRepository.findByIdAndPublishedTrue(courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Опубликованный курс не найден"
+                ));
+
+        return moduleRepository.findAllByCourse_IdOrderByPositionAsc(courseId);
+    }
 }

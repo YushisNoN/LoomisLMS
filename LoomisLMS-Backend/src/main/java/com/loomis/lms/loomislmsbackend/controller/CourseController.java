@@ -34,17 +34,40 @@ public class CourseController {
         return courseService.getTeacherCourses(teacherId);
     }
 
+    @GetMapping("/{id}/student")
+    public CourseResponse getStudentCourse(@PathVariable UUID id, Authentication authentication) {
+        requireStudent(authentication);
+
+        return courseService.getPublishedCourse(id);
+    }
+
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public CourseResponse createCourse(
-            @RequestBody CourseRequest request,
-            Authentication authentication
-    ) {
+    public CourseResponse createCourse(@RequestBody CourseRequest request, Authentication authentication) {
         requireTeacher(authentication);
 
         UUID teacherId = UUID.fromString(authentication.getName());
 
         return courseService.createCourse(request, teacherId);
+    }
+
+    @PutMapping("/{id}/publish")
+    public CourseResponse publishCourse(@PathVariable UUID id, Authentication authentication) {
+        requireTeacher(authentication);
+
+        UUID teacherId = UUID.fromString(authentication.getName());
+
+        return courseService.publishCourse(id, teacherId);
+    }
+
+    @PutMapping("/{id}/unpublish")
+    public CourseResponse unpublishCourse(@PathVariable UUID id, Authentication authentication) {
+        requireTeacher(authentication);
+
+        UUID teacherId = UUID.fromString(authentication.getName());
+
+        return courseService.unpublishCourse(id, teacherId);
     }
 
     private void requireTeacher(Authentication authentication) {
@@ -62,6 +85,18 @@ public class CourseController {
         }
     }
 
+    private void requireStudent(Authentication authentication) {
+        boolean isStudent = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_STUDENT")
+                );
+
+        if (!isStudent) {
+            throw new AccessDeniedException("Недостаточно прав");
+        }
+    }
+
     @GetMapping("/{id}")
     public CourseResponse getTeacherCourse(
             @PathVariable UUID id,
@@ -73,4 +108,6 @@ public class CourseController {
 
         return courseService.getTeacherCourse(id, teacherId);
     }
+
+
 }

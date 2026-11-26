@@ -145,4 +145,43 @@ public class LessonService {
             );
         }
     }
+
+    public List<Lesson> getPublishedModuleLessons(UUID courseId, UUID moduleId) {
+        courseRepository.findByIdAndPublishedTrue(courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Опубликованный курс не найден"
+                ));
+
+        moduleRepository.findByIdAndCourse_Id(moduleId, courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Модуль не найден"
+                ));
+
+        return lessonRepository.findAllByModule_IdOrderByPositionAsc(moduleId);
+    }
+
+    public Lesson getPublishedLesson(UUID courseId, UUID moduleId, UUID lessonId) {
+        courseRepository.findByIdAndPublishedTrue(courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Опубликованный курс не найден"
+                ));
+
+        moduleRepository.findByIdAndCourse_Id(moduleId, courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Модуль не найден"
+                ));
+
+        return findLesson(moduleId, lessonId);
+    }
+
+    public Lesson getLessonForFileAccess(UUID courseId, UUID moduleId, UUID lessonId, UUID userId, boolean isTeacher) {
+        if (isTeacher) {
+            return getLesson(courseId, moduleId, lessonId, userId);
+        }
+        return getPublishedLesson(courseId, moduleId, lessonId);
+    }
 }

@@ -63,4 +63,41 @@ public class CourseService {
 
         return CourseResponse.from(course);
     }
+
+    public CourseResponse publishCourse(UUID courseId, UUID teacherId) {
+        Course course = courseRepository
+                .findByIdAndTeacher_Id(courseId, teacherId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Курс не найден"
+                ));
+
+        course.setPublished(true);
+
+        return CourseResponse.from(courseRepository.save(course));
+    }
+
+    public CourseResponse unpublishCourse(UUID courseId, UUID teacherId) {
+        Course course = courseRepository
+                .findByIdAndTeacher_Id(courseId, teacherId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Курс не найден"
+                ));
+
+        course.setPublished(false);
+
+        return CourseResponse.from(courseRepository.save(course));
+    }
+
+    public CourseResponse getPublishedCourse(UUID courseId) {
+        Course course = courseRepository
+                .findByIdAndPublishedTrue(courseId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Опубликованный курс не найден"
+                ));
+
+        return CourseResponse.from(course);
+    }
 }

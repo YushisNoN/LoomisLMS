@@ -14,4 +14,5 @@ public interface CourseRepository extends JpaRepository<Course, UUID> {
     List<Course> findAllByPublishedTrue();
     List<Course> findAllByTeacher_IdOrderByCreatedAtDesc(UUID teacherId);
     Optional<Course> findByIdAndTeacher_Id(UUID id, UUID teacherId);
+    Optional<Course> findByIdAndPublishedTrue(UUID id);
 }

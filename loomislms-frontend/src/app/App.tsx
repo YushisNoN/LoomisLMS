@@ -11,6 +11,7 @@ import CoursePage from '../pages/CoursePage'
 import LessonPage from '../pages/LessonPage'
 import TestEditorPage from '../pages/TestEditorPage'
 import MarkdownTestPage from '../pages/MarkdownTestPage'
+import StudentCoursePage from '../pages/StudentCoursePage'
 
 function App() {
     return (
@@ -21,7 +22,7 @@ function App() {
 
                 <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<DashboardPage />} />
-
+                    <Route path="/courses/:id" element={<StudentCoursePage />} />
                     <Route element={<TeacherRoute />}>
                         <Route path="/teacher" element={<TeacherPage />} />
 

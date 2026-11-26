@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.UUID;
 
@@ -58,5 +59,27 @@ public class ModuleController {
                 request.moduleIds(),
                 teacherId
         );
+    }
+
+    private void requireStudent(Authentication authentication) throws AccessDeniedException {
+        boolean isStudent = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_STUDENT")
+                );
+
+        if (!isStudent) {
+            throw new AccessDeniedException("Недостаточно прав");
+        }
+    }
+
+    @GetMapping("/student")
+    public List<ModuleResponse> getStudentModules(@PathVariable UUID courseId, Authentication authentication) throws AccessDeniedException {
+        requireStudent(authentication);
+
+        return moduleService.getPublishedCourseModules(courseId)
+                .stream()
+                .map(ModuleResponse::from)
+                .toList();
     }
 }

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 import java.util.UUID;
 
@@ -63,7 +64,6 @@ public class LessonController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reorderLessons(@PathVariable UUID courseId, @PathVariable UUID moduleId, @RequestBody LessonOrderRequest request, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
-
         lessonService.reorderLessons(
                 courseId,
                 moduleId,
@@ -71,7 +71,6 @@ public class LessonController {
                 teacherId
         );
     }
-
     @GetMapping("/{lessonId}")
     public LessonResponse getLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @PathVariable UUID lessonId, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
@@ -99,5 +98,26 @@ public class LessonController {
                         teacherId
                 )
         );
+    }
+    private void requireStudent(Authentication authentication) throws AccessDeniedException {
+        boolean isStudent = authentication.getAuthorities()
+                .stream()
+                .anyMatch(authority ->
+                        authority.getAuthority().equals("ROLE_STUDENT")
+                );
+
+        if (!isStudent) {
+            throw new AccessDeniedException("Недостаточно прав");
+        }
+    }
+
+    @GetMapping("/student")
+    public List<LessonResponse> getStudentLessons(@PathVariable UUID courseId, @PathVariable UUID moduleId, Authentication authentication) throws AccessDeniedException {
+        requireStudent(authentication);
+
+        return lessonService.getPublishedModuleLessons(courseId, moduleId)
+                .stream()
+                .map(LessonResponse::from)
+                .toList();
     }
 }

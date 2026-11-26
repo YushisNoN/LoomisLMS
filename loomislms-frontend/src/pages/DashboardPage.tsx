@@ -248,8 +248,9 @@ function DashboardPage() {
                                         {courses.map((course) => (
                                             <div
                                                 key={course.id}
-                                                className="rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-violet-500/40"
-                                            >
+                                                onClick={() => navigate(`/courses/${course.id}`)}
+                                                className="cursor-pointer rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-violet-500/40 hover:bg-violet-500/[0.04]"
+                                            >`
                                                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-xl text-violet-300">
                                                     ▤
                                                 </div>
