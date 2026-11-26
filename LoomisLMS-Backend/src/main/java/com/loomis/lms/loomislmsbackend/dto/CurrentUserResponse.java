@@ -1,7 +1,4 @@
 package com.loomis.lms.loomislmsbackend.dto;
-
-
-
 import com.loomis.lms.loomislmsbackend.entity.User;
 
 import java.util.UUID;

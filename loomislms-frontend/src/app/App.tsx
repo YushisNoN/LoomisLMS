@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 
-import LoginPage from '../pages/auth/LoginPage.tsx'
+import LoginPage from '../pages/auth/LoginPage'
 import RegisterPage from '../pages/auth/RegisterPage'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
+import TeacherRoute from '../components/auth/TeacherRoute'
+
 import DashboardPage from '../pages/DashboardPage'
+import TeacherPage from '../pages/TeacherPage'
 
 function App() {
     return (
@@ -14,6 +17,10 @@ function App() {
 
                 <Route element={<ProtectedRoute />}>
                     <Route path="/dashboard" element={<DashboardPage />} />
+
+                    <Route element={<TeacherRoute />}>
+                        <Route path="/teacher" element={<TeacherPage />} />
+                    </Route>
                 </Route>
 
                 <Route path="*" element={<Navigate to="/login" replace />} />

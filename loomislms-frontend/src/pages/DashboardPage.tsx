@@ -1,9 +1,48 @@
-
+import { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 
+interface Course {
+    id: string
+    title: string
+    description: string | null
+    createdAt: string
+}
+
 function DashboardPage() {
     const { user, logout } = useAuth()
+
+    const [courses, setCourses] = useState<Course[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+    const [error, setError] = useState('')
+
+    useEffect(() => {
+        async function loadCourses() {
+            try {
+                const token = localStorage.getItem('token')
+
+                const response = await fetch('http://localhost:8080/api/courses', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                })
+
+                if (!response.ok) {
+                    throw new Error('Не удалось загрузить курсы')
+                }
+
+                const data: Course[] = await response.json()
+                setCourses(data)
+            } catch (error) {
+                console.error('[COURSES] Ошибка загрузки:', error)
+                setError('Не удалось загрузить курсы')
+            } finally {
+                setIsLoading(false)
+            }
+        }
+
+        loadCourses()
+    }, [])
 
     return (
         <div className="min-h-screen bg-[#0b0b12] text-white">
@@ -133,8 +172,8 @@ function DashboardPage() {
                                 <StatCard
                                     icon="▤"
                                     label="Мои курсы"
-                                    value="0"
-                                    description="Курсы ещё не добавлены"
+                                    value={String(courses.length)}
+                                    description="Доступные курсы"
                                 />
 
                                 <StatCard
@@ -169,24 +208,55 @@ function DashboardPage() {
                                     </div>
 
                                     <span className="rounded-lg bg-white/5 px-3 py-1.5 text-xs text-gray-400">
-                                        0 курсов
+                                        {courses.length} курсов
                                     </span>
                                 </div>
 
-                                <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-6 text-center">
-                                    <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-2xl text-violet-300">
-                                        ▤
+                                {isLoading ? (
+                                    <div className="flex min-h-56 items-center justify-center text-sm text-gray-500">
+                                        Загружаем курсы...
                                     </div>
+                                ) : error ? (
+                                    <div className="flex min-h-56 items-center justify-center text-sm text-red-400">
+                                        {error}
+                                    </div>
+                                ) : courses.length === 0 ? (
+                                    <div className="flex min-h-56 flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-6 text-center">
+                                        <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-2xl text-violet-300">
+                                            ▤
+                                        </div>
 
-                                    <h4 className="font-medium">
-                                        Пока нет курсов
-                                    </h4>
+                                        <h4 className="font-medium">
+                                            Пока нет курсов
+                                        </h4>
 
-                                    <p className="mt-2 max-w-sm text-sm leading-6 text-gray-500">
-                                        Когда тебе будут доступны курсы,
-                                        они появятся в этом разделе.
-                                    </p>
-                                </div>
+                                        <p className="mt-2 max-w-sm text-sm leading-6 text-gray-500">
+                                            Когда тебе будут доступны курсы,
+                                            они появятся в этом разделе.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        {courses.map((course) => (
+                                            <div
+                                                key={course.id}
+                                                className="rounded-xl border border-white/10 bg-white/[0.02] p-5 transition hover:border-violet-500/40"
+                                            >
+                                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 text-xl text-violet-300">
+                                                    ▤
+                                                </div>
+
+                                                <h4 className="font-semibold">
+                                                    {course.title}
+                                                </h4>
+
+                                                <p className="mt-2 text-sm leading-6 text-gray-500">
+                                                    {course.description || 'Описание пока отсутствует'}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </section>
 
                             {/* Tasks */}

@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 
@@ -6,6 +5,7 @@ interface User {
     id: string
     email: string
     name: string
+    role: 'STUDENT' | 'TEACHER' | 'ADMIN'
 }
 
 interface AuthContextType {
@@ -51,6 +51,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             id: data.id,
             email: data.email,
             name: `${data.firstName} ${data.lastName}`,
+            role: data.role,
         }
     }
 
