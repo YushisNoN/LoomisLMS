@@ -8,6 +8,7 @@ import TeacherRoute from '../components/auth/TeacherRoute'
 import DashboardPage from '../pages/DashboardPage'
 import TeacherPage from '../pages/TeacherPage'
 import CoursePage from '../pages/CoursePage'
+import LessonPage from '../pages/LessonPage'
 
 function App() {
     return (
@@ -22,7 +23,12 @@ function App() {
                     <Route element={<TeacherRoute />}>
                         <Route path="/teacher" element={<TeacherPage />} />
                         <Route path="/teacher/courses/:id" element={<CoursePage />} />
+                        <Route
+                            path="/teacher/courses/:id/lessons/:lessonId"
+                            element={<LessonPage />}
+                        />
                     </Route>
+
                 </Route>
 
                 <Route path="*" element={<Navigate to="/login" replace />} />

@@ -1,9 +1,10 @@
 package com.loomis.lms.loomislmsbackend.controller;
 
+
+import com.loomis.lms.loomislmsbackend.dto.LessonOrderRequest;
 import com.loomis.lms.loomislmsbackend.dto.LessonRequest;
 import com.loomis.lms.loomislmsbackend.dto.LessonResponse;
 import com.loomis.lms.loomislmsbackend.services.LessonService;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -12,47 +13,91 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.UUID;
 
-import com.loomis.lms.loomislmsbackend.dto.LessonOrderRequest;
-import org.springframework.http.HttpStatus;
-
 @RestController
-@RequestMapping("/api/courses/{courseId}/lessons")
+@RequestMapping("/api/courses/{courseId}/modules/{moduleId}/lessons")
 public class LessonController {
 
     @Autowired
     private LessonService lessonService;
 
     @GetMapping
-    public List<LessonResponse> getLessons(@PathVariable UUID courseId, Authentication authentication) {
+    public List<LessonResponse> getLessons(@PathVariable UUID courseId, @PathVariable UUID moduleId, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
 
-        return lessonService.getCourseLessons(courseId, teacherId);
+        return lessonService
+                .getModuleLessons(courseId, moduleId, teacherId)
+                .stream()
+                .map(LessonResponse::from)
+                .toList();
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public LessonResponse createLesson(@PathVariable UUID courseId, @RequestBody LessonRequest request, Authentication authentication) {
+    public LessonResponse createLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @RequestBody LessonRequest request, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
 
-        return lessonService.createLesson(courseId, request, teacherId);
+        return LessonResponse.from(
+                lessonService.createLesson(
+                        courseId,
+                        moduleId,
+                        request,
+                        teacherId
+                )
+        );
     }
 
     @DeleteMapping("/{lessonId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteLesson(@PathVariable UUID courseId, @PathVariable UUID lessonId, Authentication authentication) {
+    public void deleteLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @PathVariable UUID lessonId, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
 
-        lessonService.deleteLesson(courseId, lessonId, teacherId);
+        lessonService.deleteLesson(
+                courseId,
+                moduleId,
+                lessonId,
+                teacherId
+        );
     }
 
     @PutMapping("/order")
-    public void reorderLessons(@PathVariable UUID courseId, @RequestBody LessonOrderRequest request, Authentication authentication) {
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderLessons(@PathVariable UUID courseId, @PathVariable UUID moduleId, @RequestBody LessonOrderRequest request, Authentication authentication) {
         UUID teacherId = UUID.fromString(authentication.getName());
 
         lessonService.reorderLessons(
                 courseId,
+                moduleId,
                 request.lessonIds(),
                 teacherId
+        );
+    }
+
+    @GetMapping("/{lessonId}")
+    public LessonResponse getLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @PathVariable UUID lessonId, Authentication authentication) {
+        UUID teacherId = UUID.fromString(authentication.getName());
+
+        return LessonResponse.from(
+                lessonService.getLesson(
+                        courseId,
+                        moduleId,
+                        lessonId,
+                        teacherId
+                )
+        );
+    }
+
+    @PutMapping("/{lessonId}")
+    public LessonResponse updateLesson(@PathVariable UUID courseId, @PathVariable UUID moduleId, @PathVariable UUID lessonId, @RequestBody LessonRequest request, Authentication authentication) {
+        UUID teacherId = UUID.fromString(authentication.getName());
+
+        return LessonResponse.from(
+                lessonService.updateLesson(
+                        courseId,
+                        moduleId,
+                        lessonId,
+                        request,
+                        teacherId
+                )
         );
     }
 }

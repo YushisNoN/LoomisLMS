@@ -42,7 +42,7 @@ public class Course {
             orphanRemoval = true
     )
     @OrderBy("position ASC")
-    private List<Lesson> lessons = new ArrayList<>();
+    private List<Module> modules = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {

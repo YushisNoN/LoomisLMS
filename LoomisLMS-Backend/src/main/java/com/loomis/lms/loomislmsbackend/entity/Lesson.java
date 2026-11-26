@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -20,6 +23,10 @@ public class Lesson {
     @Column(nullable = false, length = 150)
     private String title;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private LessonType type;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 
@@ -30,8 +37,16 @@ public class Lesson {
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id", nullable = false)
-    private Course course;
+    @JoinColumn(name = "module_id", nullable = false)
+    private Module module;
+
+    @OneToMany(
+            mappedBy = "lesson",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    @OrderBy("position ASC")
+    private List<TestQuestion> questions = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
