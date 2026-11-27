@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
 import { useAuthenticatedFile } from '../../hooks/useAuthenticatedFile'
 
 interface Props {
@@ -102,7 +101,6 @@ function VideoPlayer({ src }: Props) {
     return (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#090910]">
             <video
-                key={blobUrl}
                 ref={videoRef}
                 src={blobUrl}
                 preload="metadata"
@@ -146,16 +144,22 @@ function VideoPlayer({ src }: Props) {
                         <span className="relative">
                             <select
                                 value={playbackRate}
-                                onChange={event => changePlaybackRate(Number(event.currentTarget.value))}
-                                className="cursor-pointer appearance-none rounded-lg border border-white/10 bg-[#12121d] py-1 pl-2 pr-7 text-gray-300 focus-visible:outline-violet-500"
+                                onChange={event => {
+                                    changePlaybackRate(Number(event.currentTarget.value))
+                                }}
+                                className="cursor-pointer appearance-none rounded-lg
+                                    border border-white/10 bg-[#12121d] py-1 pl-2 pr-7
+                                    text-gray-300 focus-visible:outline-violet-500"
                             >
                                 {playbackRates.map(rate => (
                                     <option key={rate} value={rate}>{rate}×</option>
                                 ))}
                             </select>
-                            <ChevronDown
+                            <span
                                 aria-hidden="true"
-                                className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-gray-400"
+                                className="pointer-events-none absolute right-3 top-1/2
+                                    size-2 -translate-y-2/3 rotate-45 border-b border-r
+                                    border-gray-400"
                             />
                         </span>
                     </label>
