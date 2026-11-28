@@ -13,6 +13,7 @@ interface Props {
     onRetryModule: (moduleId: string) => void
     onOpenLesson: (moduleId: string, lesson: Lesson) => void
     getLessonTypeName: (type: Lesson['type']) => string
+    onClose?: () => void
 }
 
 interface ModuleLessonListProps {
@@ -90,19 +91,30 @@ function CourseSidebar({
     onToggleModule,
     onRetryModule,
     onOpenLesson,
-    getLessonTypeName
+    getLessonTypeName,
+    onClose
 }: Props) {
     const headingId = useId()
 
     return (
-        <nav
-            aria-labelledby={headingId}
-            className="rounded-2xl border border-white/10 bg-[#12121d] p-4
-                lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto"
-        >
-            <h3 id={headingId} className="mb-4 px-2 text-sm font-semibold">
-                Программа курса
-            </h3>
+        <nav aria-labelledby={headingId} className="p-4">
+            <div className={`mb-4 flex items-center justify-between gap-2 px-2
+                ${onClose ? 'sticky top-0 z-10 bg-[#12121d]' : ''}`}>
+                <h3 id={headingId} className="text-sm font-semibold">
+                    Программа курса
+                </h3>
+                {onClose && (
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11 min-w-11"
+                        aria-label="Закрыть программу курса"
+                        onClick={onClose}
+                    >
+                        <span aria-hidden="true" className="text-2xl leading-none">×</span>
+                    </Button>
+                )}
+            </div>
 
             {modules.length === 0 && (
                 <p className="px-2 text-sm text-gray-400">В этом курсе пока нет модулей.</p>

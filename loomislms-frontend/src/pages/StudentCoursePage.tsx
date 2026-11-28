@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/ui/Button'
 import LessonBlockRenderer from '../components/lesson/LessonBlockRender'
 import type { LessonBlock } from '../components/lesson/LessonBlockRender'
-import CourseSidebar from '../components/course/CourseSidebar'
+import CourseNavigation from '../components/course/CourseNavigation'
 import type { Lesson, Module } from '../components/course/courseTypes'
 
 interface Course {
@@ -291,7 +291,7 @@ function StudentCourse({ courseId }: { courseId: string }) {
                 </div>
             </header>
 
-            <main className="mx-auto max-w-6xl px-6 py-10">
+            <main className="mx-auto max-w-6xl py-10 pl-13 pr-4 lg:px-6">
                 <div className="mb-10">
                     <p className="mb-3 text-sm text-gray-500">
                         Dashboard / Мои курсы / {course.title}
@@ -307,7 +307,7 @@ function StudentCourse({ courseId }: { courseId: string }) {
                 </div>
 
                 <div className="grid items-start gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
-                    <CourseSidebar
+                    <CourseNavigation
                         modules={modules}
                         lessons={lessons}
                         expandedModule={expandedModule}
@@ -322,7 +322,7 @@ function StudentCourse({ courseId }: { courseId: string }) {
 
                     {selectedLesson ? (
                         <section className="min-w-0 rounded-2xl border border-white/10
-                            bg-[#12121d] p-6 sm:p-8">
+                            bg-[#12121d] p-4 sm:p-8">
                             <div className="mb-6">
                                 <p className="mb-2 text-sm text-violet-400">
                                     {getLessonTypeName(selectedLesson.type)}
