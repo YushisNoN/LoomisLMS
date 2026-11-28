@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/ui/Button'
 import LessonBlockRenderer from '../components/lesson/LessonBlockRender'
+import type { LessonBlock } from '../components/lesson/LessonBlockRender'
 
 interface Course {
     id: string
@@ -22,14 +23,7 @@ interface Lesson {
     id: string
     title: string
     content: string | null
-    type: 'LECTURE' | 'TEXT' | 'TEST' | 'CODE_TASK'
-    position: number
-}
-
-interface LessonBlock {
-    id: string
-    type: string
-    content: string
+    type: 'LECTURE' | 'TEXT' | 'TEST' | 'CODING_TASK'
     position: number
 }
 
@@ -98,7 +92,7 @@ function StudentCoursePage() {
                 return 'Теория'
             case 'TEST':
                 return 'Тест'
-            case 'CODE_TASK':
+            case 'CODING_TASK':
                 return 'Задача на программирование'
             default:
                 return 'Урок'

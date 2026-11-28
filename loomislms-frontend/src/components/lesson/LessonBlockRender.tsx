@@ -7,7 +7,7 @@ import rehypeKatex from 'rehype-katex'
 import VideoPlayer from './VideoPlayer'
 import { useAuthenticatedFile } from '../../hooks/useAuthenticatedFile'
 
-interface LessonBlock {
+export interface LessonBlock {
     id: string
     type: 'TEXT' | 'VIDEO' | 'PRESENTATION' | 'IMAGE' | 'DIVIDER'
     content: string
