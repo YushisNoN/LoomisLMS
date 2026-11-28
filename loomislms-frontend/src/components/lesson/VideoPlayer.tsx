@@ -5,6 +5,8 @@ interface Props {
     src: string
 }
 
+const playbackRates = [0.25, 0.5, 1, 1.25, 1.5, 2]
+
 function formatTime(seconds: number) {
     if (!Number.isFinite(seconds)) return '0:00'
 
@@ -22,6 +24,7 @@ function VideoPlayer({ src }: Props) {
     const [playing, setPlaying] = useState(false)
     const [currentTime, setCurrentTime] = useState(0)
     const [duration, setDuration] = useState(0)
+    const [playbackRate, setPlaybackRate] = useState(1)
     const [volume, setVolume] = useState(1)
     const [muted, setMuted] = useState(false)
 
@@ -55,6 +58,13 @@ function VideoPlayer({ src }: Props) {
 
         video.currentTime = value
         setCurrentTime(value)
+    }
+
+    function changePlaybackRate(rate: number) {
+        const video = videoRef.current
+        if (!video) return
+
+        video.playbackRate = rate
     }
 
     function toggleMute() {
@@ -94,9 +104,14 @@ function VideoPlayer({ src }: Props) {
                 ref={videoRef}
                 src={blobUrl}
                 preload="metadata"
-                className="w-full"
+                className="w-full cursor-pointer"
+                onClick={togglePlay}
                 onTimeUpdate={event => setCurrentTime(event.currentTarget.currentTime)}
-                onLoadedMetadata={event => setDuration(event.currentTarget.duration)}
+                onLoadedMetadata={event => {
+                    setDuration(event.currentTarget.duration)
+                    setPlaybackRate(event.currentTarget.playbackRate)
+                }}
+                onRateChange={event => setPlaybackRate(event.currentTarget.playbackRate)}
                 onPlay={() => setPlaying(true)}
                 onPause={() => setPlaying(false)}
                 onEnded={() => setPlaying(false)}
@@ -113,7 +128,7 @@ function VideoPlayer({ src }: Props) {
                     className="w-full accent-violet-500"
                 />
 
-                <div className="flex items-center gap-4 text-sm text-gray-300">
+                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-300">
                     <button onClick={togglePlay}>
                         {playing ? '❚❚' : '▶'}
                     </button>
@@ -123,6 +138,31 @@ function VideoPlayer({ src }: Props) {
                     </span>
 
                     <div className="flex-1" />
+
+                    <label className="flex items-center gap-2">
+                        Скорость
+                        <span className="relative">
+                            <select
+                                value={playbackRate}
+                                onChange={event => {
+                                    changePlaybackRate(Number(event.currentTarget.value))
+                                }}
+                                className="cursor-pointer appearance-none rounded-lg
+                                    border border-white/10 bg-[#12121d] py-1 pl-2 pr-7
+                                    text-gray-300 focus-visible:outline-violet-500"
+                            >
+                                {playbackRates.map(rate => (
+                                    <option key={rate} value={rate}>{rate}×</option>
+                                ))}
+                            </select>
+                            <span
+                                aria-hidden="true"
+                                className="pointer-events-none absolute right-3 top-1/2
+                                    size-2 -translate-y-2/3 rotate-45 border-b border-r
+                                    border-gray-400"
+                            />
+                        </span>
+                    </label>
 
                     <button onClick={toggleMute}>
                         {muted ? '🔇' : '🔊'}
