@@ -1,9 +1,11 @@
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Button from '../components/ui/Button'
 import LessonBlockRenderer from '../components/lesson/LessonBlockRender'
 import type { LessonBlock } from '../components/lesson/LessonBlockRender'
+import CourseSidebar from '../components/course/CourseSidebar'
+import type { Lesson, Module } from '../components/course/courseTypes'
 
 interface Course {
     id: string
@@ -12,56 +14,153 @@ interface Course {
     createdAt: string
 }
 
-interface Module {
-    id: string
-    title: string
-    description: string | null
-    position: number
-}
-
-interface Lesson {
-    id: string
-    title: string
-    content: string | null
-    type: 'LECTURE' | 'TEXT' | 'TEST' | 'CODING_TASK'
-    position: number
-}
-
 function StudentCoursePage() {
-    const { id } = useParams()
+    const { id = '' } = useParams()
+    return <StudentCourse key={id} courseId={id} />
+}
+
+function StudentCourse({ courseId }: { courseId: string }) {
     const navigate = useNavigate()
+    const courseUrl = `http://localhost:8080/api/courses/${courseId}`
 
     const [course, setCourse] = useState<Course | null>(null)
     const [modules, setModules] = useState<Module[]>([])
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState('')
+    const [courseLoadAttempt, setCourseLoadAttempt] = useState(0)
 
     const [lessons, setLessons] = useState<Record<string, Lesson[]>>({})
     const [expandedModule, setExpandedModule] = useState<string | null>(null)
-    const [loadingModule, setLoadingModule] = useState<string | null>(null)
-    const [moduleError, setModuleError] = useState('')
+    const [loadingModules, setLoadingModules] = useState<Record<string, boolean>>({})
+    const [moduleErrors, setModuleErrors] = useState<Record<string, string>>({})
 
     const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null)
     const [lessonBlocks, setLessonBlocks] = useState<LessonBlock[]>([])
     const [loadingBlocks, setLoadingBlocks] = useState(false)
     const [lessonError, setLessonError] = useState('')
+    const [initialLessonStatus, setInitialLessonStatus] =
+        useState<'loading' | 'empty' | null>('loading')
+
+    const manualSelection = useRef(false)
+    const courseRequest = useRef<AbortController | null>(null)
+    const lessonRequest = useRef<AbortController | null>(null)
+    const moduleRequests = useRef(new Map<string, Promise<Lesson[] | null>>())
+
+    const loadModuleLessons = useCallback((moduleId: string, signal: AbortSignal) => {
+        const requests = moduleRequests.current
+        const pending = requests.get(moduleId)
+        if (pending) return pending
+
+        setLoadingModules(previous => ({ ...previous, [moduleId]: true }))
+        setModuleErrors(previous => ({ ...previous, [moduleId]: '' }))
+
+        async function fetchLessons() {
+            try {
+                const token = localStorage.getItem('token')
+                const url = `${courseUrl}/modules/${moduleId}/lessons/student`
+                const response = await fetch(url, {
+                    headers: { Authorization: `Bearer ${token}` },
+                    signal,
+                })
+
+                if (!response.ok) throw new Error('Не удалось загрузить уроки')
+
+                const data: Lesson[] = await response.json()
+                if (signal.aborted) return null
+
+                setLessons(previous => ({ ...previous, [moduleId]: data }))
+                return data
+            } catch (error) {
+                if (signal.aborted) return null
+                console.error('[STUDENT LESSONS] Ошибка:', error)
+                setModuleErrors(previous => ({
+                    ...previous,
+                    [moduleId]: 'Не удалось загрузить уроки',
+                }))
+                return null
+            } finally {
+                if (!signal.aborted) {
+                    requests.delete(moduleId)
+                    setLoadingModules(previous => ({ ...previous, [moduleId]: false }))
+                }
+            }
+        }
+
+        const request = fetchLessons()
+        requests.set(moduleId, request)
+        return request
+    }, [courseUrl])
+
+    const openLesson = useCallback(async (moduleId: string, lesson: Lesson) => {
+        lessonRequest.current?.abort()
+        setSelectedLesson(lesson)
+        setLessonBlocks([])
+        setLessonError('')
+        setLoadingBlocks(lesson.type === 'LECTURE')
+
+        if (lesson.type !== 'LECTURE') return
+
+        const controller = new AbortController()
+        lessonRequest.current = controller
+        const { signal } = controller
+
+        try {
+            const token = localStorage.getItem('token')
+            const url = `${courseUrl}/modules/${moduleId}/lessons/${lesson.id}/blocks/student`
+            const response = await fetch(url, {
+                headers: { Authorization: `Bearer ${token}` },
+                signal,
+            })
+
+            if (!response.ok) throw new Error('Не удалось загрузить содержимое лекции')
+
+            const data: LessonBlock[] = await response.json()
+            if (!signal.aborted) setLessonBlocks(data)
+        } catch (error) {
+            if (signal.aborted) return
+            console.error('[STUDENT LESSON BLOCKS]', error)
+            setLessonError('Не удалось загрузить содержимое урока')
+        } finally {
+            if (!signal.aborted) setLoadingBlocks(false)
+        }
+    }, [courseUrl])
 
     useEffect(() => {
+        const controller = new AbortController()
+        const { signal } = controller
+        courseRequest.current = controller
+        const requests = moduleRequests.current
+
+        async function openFirstLesson(courseModules: Module[]) {
+            for (const module of courseModules) {
+                const moduleLessons = await loadModuleLessons(module.id, signal)
+                if (signal.aborted || manualSelection.current) return
+
+                if (moduleLessons === null) {
+                    setExpandedModule(module.id)
+                    setInitialLessonStatus(null)
+                    return
+                }
+
+                const firstLesson = moduleLessons[0]
+                if (firstLesson) {
+                    setExpandedModule(module.id)
+                    setInitialLessonStatus(null)
+                    void openLesson(module.id, firstLesson)
+                    return
+                }
+            }
+
+            setInitialLessonStatus('empty')
+        }
+
         async function loadCourse() {
             try {
                 const token = localStorage.getItem('token')
-
-                const headers = {
-                    Authorization: `Bearer ${token}`,
-                }
-
+                const headers = { Authorization: `Bearer ${token}` }
                 const [courseResponse, modulesResponse] = await Promise.all([
-                    fetch(`http://localhost:8080/api/courses/${id}/student`, {
-                        headers,
-                    }),
-                    fetch(`http://localhost:8080/api/courses/${id}/modules/student`, {
-                        headers,
-                    }),
+                    fetch(`${courseUrl}/student`, { headers, signal }),
+                    fetch(`${courseUrl}/modules/student`, { headers, signal }),
                 ])
 
                 if (!courseResponse.ok || !modulesResponse.ok) {
@@ -70,19 +169,28 @@ function StudentCoursePage() {
 
                 const courseData: Course = await courseResponse.json()
                 const modulesData: Module[] = await modulesResponse.json()
+                if (signal.aborted) return
 
                 setCourse(courseData)
                 setModules(modulesData)
+                void openFirstLesson(modulesData)
             } catch (error) {
+                if (signal.aborted) return
                 console.error('[STUDENT COURSE] Ошибка:', error)
                 setError('Не удалось загрузить курс. Возможно, он больше недоступен.')
             } finally {
-                setIsLoading(false)
+                if (!signal.aborted) setIsLoading(false)
             }
         }
 
-        loadCourse()
-    }, [id])
+        void loadCourse()
+
+        return () => {
+            controller.abort()
+            requests.clear()
+            lessonRequest.current?.abort()
+        }
+    }, [courseUrl, courseLoadAttempt, loadModuleLessons, openLesson])
 
     function getLessonTypeName(type: Lesson['type']) {
         switch (type) {
@@ -99,104 +207,38 @@ function StudentCoursePage() {
         }
     }
 
-    async function toggleModule(moduleId: string) {
+    function toggleModule(moduleId: string) {
+        manualSelection.current = true
+        setInitialLessonStatus(null)
+
         if (expandedModule === moduleId) {
             setExpandedModule(null)
-
-            if (selectedLesson) {
-                const currentLessons = lessons[moduleId] || []
-                const belongsToModule = currentLessons.some(
-                    lesson => lesson.id === selectedLesson.id
-                )
-
-                if (belongsToModule) {
-                    setSelectedLesson(null)
-                    setLessonBlocks([])
-                    setLessonError('')
-                }
-            }
-
             return
         }
 
         setExpandedModule(moduleId)
-        setModuleError('')
+        requestModuleLessons(moduleId)
+    }
 
-        if (lessons[moduleId]) {
-            return
-        }
-
-        try {
-            setLoadingModule(moduleId)
-
-            const token = localStorage.getItem('token')
-
-            const response = await fetch(
-                `http://localhost:8080/api/courses/${id}/modules/${moduleId}/lessons/student`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            )
-
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить уроки')
-            }
-
-            const data: Lesson[] = await response.json()
-
-            setLessons(prev => ({
-                ...prev,
-                [moduleId]: data,
-            }))
-        } catch (error) {
-            console.error('[STUDENT LESSONS] Ошибка:', error)
-            setModuleError('Не удалось загрузить уроки')
-        } finally {
-            setLoadingModule(null)
+    function requestModuleLessons(moduleId: string) {
+        const signal = courseRequest.current?.signal
+        if (signal && !signal.aborted && !lessons[moduleId]) {
+            void loadModuleLessons(moduleId, signal)
         }
     }
 
-    async function openLesson(lesson: Lesson) {
-        setSelectedLesson(lesson)
-        setLessonBlocks([])
-        setLessonError('')
+    function selectLesson(moduleId: string, lesson: Lesson) {
+        manualSelection.current = true
+        setInitialLessonStatus(null)
+        if (selectedLesson?.id === lesson.id && !lessonError) return
 
-        if (lesson.type !== 'LECTURE') {
-            return
-        }
+        void openLesson(moduleId, lesson)
+    }
 
-        if (!expandedModule) {
-            return
-        }
-
-        try {
-            setLoadingBlocks(true)
-
-            const token = localStorage.getItem('token')
-
-            const response = await fetch(
-                `http://localhost:8080/api/courses/${id}/modules/${expandedModule}/lessons/${lesson.id}/blocks/student`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            )
-
-            if (!response.ok) {
-                throw new Error('Не удалось загрузить содержимое лекции')
-            }
-
-            const data: LessonBlock[] = await response.json()
-            setLessonBlocks(data)
-        } catch (error) {
-            console.error('[STUDENT LESSON BLOCKS]', error)
-            setLessonError('Не удалось загрузить содержимое урока')
-        } finally {
-            setLoadingBlocks(false)
-        }
+    function retryCourse() {
+        setIsLoading(true)
+        setError('')
+        setCourseLoadAttempt(attempt => attempt + 1)
     }
 
     if (isLoading) {
@@ -209,11 +251,13 @@ function StudentCoursePage() {
 
     if (error || !course) {
         return (
-            <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#0b0b12] text-white">
-                <p className="text-red-400">
+            <div className="flex min-h-screen flex-col items-center justify-center
+                gap-4 bg-[#0b0b12] px-6 text-center text-white">
+                <p role="status" className="text-red-400">
                     {error || 'Курс не найден'}
                 </p>
 
+                <Button onClick={retryCourse}>Повторить загрузку</Button>
                 <Button
                     variant="secondary"
                     onClick={() => navigate('/dashboard')}
@@ -262,143 +306,68 @@ function StudentCoursePage() {
                     </p>
                 </div>
 
-                <section>
-                    <div className="mb-6">
-                        <h3 className="text-xl font-semibold">
-                            Программа курса
-                        </h3>
+                <div className="grid items-start gap-6 lg:grid-cols-[17rem_minmax(0,1fr)]">
+                    <CourseSidebar
+                        modules={modules}
+                        lessons={lessons}
+                        expandedModule={expandedModule}
+                        loadingModules={loadingModules}
+                        moduleErrors={moduleErrors}
+                        selectedLessonId={selectedLesson?.id ?? null}
+                        onToggleModule={toggleModule}
+                        onRetryModule={requestModuleLessons}
+                        onOpenLesson={selectLesson}
+                        getLessonTypeName={getLessonTypeName}
+                    />
 
-                        <p className="mt-1 text-sm text-gray-500">
-                            {modules.length} модулей
-                        </p>
-                    </div>
-
-                    {modules.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-white/10 p-10 text-center text-gray-500">
-                            В этом курсе пока нет модулей.
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {modules.map((module, index) => {
-                                const isExpanded = expandedModule === module.id
-
-                                return (
-                                    <div
-                                        key={module.id}
-                                        className="overflow-hidden rounded-2xl border border-white/10 bg-[#12121d]"
-                                    >
-                                        <button
-                                            onClick={() => toggleModule(module.id)}
-                                            className="flex w-full items-center justify-between p-6 text-left transition hover:bg-white/[0.03]"
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 font-semibold text-violet-300">
-                                                    {index + 1}
-                                                </div>
-
-                                                <div>
-                                                    <h4 className="font-semibold">
-                                                        {module.title}
-                                                    </h4>
-
-                                                    {module.description && (
-                                                        <p className="mt-2 text-sm leading-6 text-gray-500">
-                                                            {module.description}
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            <span className="ml-4 text-gray-400">
-                                                {isExpanded ? '−' : '+'}
-                                            </span>
-                                        </button>
-
-                                        {isExpanded && (
-                                            <div className="border-t border-white/10 px-6 py-4">
-                                                {loadingModule === module.id ? (
-                                                    <p className="py-4 text-sm text-gray-500">
-                                                        Загружаем уроки...
-                                                    </p>
-                                                ) : moduleError ? (
-                                                    <p className="py-4 text-sm text-red-400">
-                                                        {moduleError}
-                                                    </p>
-                                                ) : lessons[module.id]?.length ? (
-                                                    <div className="space-y-2">
-                                                        {lessons[module.id].map((lesson, lessonIndex) => (
-                                                            <button
-                                                                key={lesson.id}
-                                                                onClick={() => openLesson(lesson)}
-                                                                className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left transition ${
-                                                                    selectedLesson?.id === lesson.id
-                                                                        ? 'border border-violet-500/30 bg-violet-500/15'
-                                                                        : 'bg-white/[0.03] hover:bg-white/[0.06]'
-                                                                }`}
-                                                            >
-                                                                <span className="text-sm text-violet-400">
-                                                                    {lessonIndex + 1}.
-                                                                </span>
-
-                                                                <span className="text-sm text-gray-300">
-                                                                    {lesson.title}
-                                                                </span>
-
-                                                                <span className="ml-auto text-xs text-gray-500">
-                                                                    {getLessonTypeName(lesson.type)}
-                                                                </span>
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                ) : (
-                                                    <p className="py-4 text-sm text-gray-500">
-                                                        В этом модуле пока нет уроков.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
-                        </div>
-                    )}
-                </section>
-
-                {selectedLesson && (
-                    <section className="mt-8 rounded-2xl border border-white/10 bg-[#12121d] p-6 sm:p-8">
-                        <div className="mb-6">
-                            <p className="mb-2 text-sm text-violet-400">
-                                {getLessonTypeName(selectedLesson.type)}
-                            </p>
-
-                            <h3 className="text-2xl font-bold">
-                                {selectedLesson.title}
-                            </h3>
-                        </div>
-
-                        {loadingBlocks ? (
-                            <p className="text-gray-500">
-                                Загружаем содержимое...
-                            </p>
-                        ) : lessonError ? (
-                            <p className="text-red-400">
-                                {lessonError}
-                            </p>
-                        ) : selectedLesson.type === 'LECTURE' ? (
-                            lessonBlocks.length === 0 ? (
-                                <p className="text-gray-500">
-                                    В этой лекции пока нет содержимого.
+                    {selectedLesson ? (
+                        <section className="min-w-0 rounded-2xl border border-white/10
+                            bg-[#12121d] p-6 sm:p-8">
+                            <div className="mb-6">
+                                <p className="mb-2 text-sm text-violet-400">
+                                    {getLessonTypeName(selectedLesson.type)}
                                 </p>
-                            ) : (
-                                <LessonBlockRenderer blocks={lessonBlocks} />
-                            )
-                        ) : (
-                            <div className="whitespace-pre-wrap leading-7 text-gray-300">
-                                {selectedLesson.content || 'Содержимое урока пока отсутствует.'}
+                                <h3 className="text-2xl font-bold wrap-break-word">
+                                    {selectedLesson.title}
+                                </h3>
                             </div>
-                        )}
-                    </section>
-                )}
+
+                            {loadingBlocks ? (
+                                <p role="status" className="text-gray-400">
+                                    Загружаем содержимое...
+                                </p>
+                            ) : lessonError ? (
+                                <p role="status" className="text-red-400">
+                                    {lessonError}
+                                </p>
+                            ) : selectedLesson.type === 'LECTURE' ? (
+                                lessonBlocks.length === 0 ? (
+                                    <p className="text-gray-400">
+                                        В этой лекции пока нет содержимого.
+                                    </p>
+                                ) : (
+                                    <LessonBlockRenderer blocks={lessonBlocks} />
+                                )
+                            ) : (
+                                <div className="whitespace-pre-wrap leading-7 text-gray-300">
+                                    {selectedLesson.content || 'Содержимое урока пока отсутствует.'}
+                                </div>
+                            )}
+                        </section>
+                    ) : (
+                        <p
+                            role="status"
+                            className="rounded-2xl border border-white/10 bg-[#12121d]
+                                px-6 py-10 text-center text-sm text-gray-400"
+                        >
+                            {initialLessonStatus === 'loading' && 'Ищем первый урок...'}
+                            {initialLessonStatus === 'empty' && 'В курсе пока нет уроков.'}
+                            {initialLessonStatus === null && (
+                                'Откройте модуль и выберите урок в программе курса.'
+                            )}
+                        </p>
+                    )}
+                </div>
             </main>
         </div>
     )
